@@ -198,3 +198,164 @@ ansible_ssh_private_key_file=/home/developer/.ssh/id_rsa
 ansible_python_interpreter=/usr/bin/python3
 ```
 
+## Шаг 2. Выполнение ad-hoc команд и основные модули ansible
+
+ad-hoc команды, это команды которые выполняются напрямую, как параметры ansible в командной строке. Любые действия ансибл выполянет посредством модулей. 
+
+Простейший пример `ansible all -m ping`, где мы говорим ансибл выполнить на всех серверах в указанных в инвентори файле модуль ping, котоырй выполнит соответствущу команду. 
+
+для получения служебной информации о выполнении команд можно использовать параметр `-v`, либо `-vv`, либо `-vvv`, и в каждом случае будет выводиться все более подробная служебная информация о процессе выполнении ансибл команд, пример `ansible cluster_servers -m shell -a "ls -lpa /home/developer" -vvv`
+
+Для получения списка команд и модулей, которые поддерживает ансибл, можно использовать команду `ansible-doc -l`
+
+### Основынек модули ansible 
+
+#### setup 
+Модуль `setup` - `ansible master_servers -m setup` выдает много информации о хосте и его настройках. 
+
+#### shell
+Модуль `shell` позволяет выполнить любую команду оболочки, 
+```
+ansible all -m shell -a "uptime"
+
+minion2 | CHANGED | rc=0 >>
+ 13:35:43 up 32 min,  0 users,  load average: 0.02, 0.07, 0.09
+minion1 | CHANGED | rc=0 >>
+ 13:35:43 up 32 min,  0 users,  load average: 0.02, 0.07, 0.09
+```
+
+#### shell, command
+
+Можно выполнить любу команду оболочки чрез модуль `shell`, например `ansible all -m shell -a "ls /home/developer"`
+Есть еще модуль `command`, он тоже может запускать команды, но не через оболочку, поэтому недоступны переменные окружения оболочки, перенаправления потоков и т.д. (`"*"`, `"<"`, `">"`, `"|"`, `";"` и `"&"`). Пример выплненяи через `command`  `ansible all -m command -a "ls /home/developer"`
+
+#### copy
+
+Модуль `copy` позволяет копировать файлы на удаленные машины. 
+```bash
+ansible all -m copy -a "src=hi.txt dest=/home/developer mode=777"
+
+minion1 | CHANGED => {
+    "changed": true,
+    "checksum": "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d",
+    "dest": "/home/developer/hi.txt",
+    "gid": 999,
+    "group": "developer",
+    "md5sum": "5d41402abc4b2a76b9719d911017c592",
+    "mode": "0777",
+    "owner": "developer",
+    "size": 5,
+    "src": "/home/developer/.ansible/tmp/ansible-tmp-1751377524.576038-3751-160554860394367/.source.txt",
+    "state": "file",
+    "uid": 999
+}
+minion2 | CHANGED => {
+    "changed": true,
+    "checksum": "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d",
+    "dest": "/home/developer/hi.txt",
+    "gid": 999,
+    "group": "developer",
+    "md5sum": "5d41402abc4b2a76b9719d911017c592",
+    "mode": "0777",
+    "owner": "developer",
+    "size": 5,
+    "src": "/home/developer/.ansible/tmp/ansible-tmp-1751377524.5859642-3752-264340817273336/.source.txt",
+    "state": "file",
+    "uid": 999
+}
+
+```
+
+Если мы хотим чтобы команда вызвалась от имени sudo, то надо к команде добавить параметр `-b`
+
+```bash
+ansible all -m copy -a "src=hi.txt dest=/home mode=777" -b
+
+minion1 | CHANGED => {
+    "changed": true,
+    "checksum": "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d",
+    "dest": "/home/hi.txt",
+    "gid": 0,
+    "group": "root",
+    "md5sum": "5d41402abc4b2a76b9719d911017c592",
+    "mode": "0777",
+    "owner": "root",
+    "size": 5,
+    "src": "/home/developer/.ansible/tmp/ansible-tmp-1751377557.9988103-4608-156469420249661/.source.txt",
+    "state": "file",
+    "uid": 0
+}
+minion2 | CHANGED => {
+    "changed": true,
+    "checksum": "aaf4c61ddcc5e8a2dabede0f3b482cd9aea9434d",
+    "dest": "/home/hi.txt",
+    "gid": 0,
+    "group": "root",
+    "md5sum": "5d41402abc4b2a76b9719d911017c592",
+    "mode": "0777",
+    "owner": "root",
+    "size": 5,
+    "src": "/home/developer/.ansible/tmp/ansible-tmp-1751377558.0059295-4609-255462204213465/.source.txt",
+    "state": "file",
+    "uid": 0
+}
+```
+
+#### file 
+
+Для удаления файла можно использовать модуль `file`, который служит для совершения операций над файлами
+```bash
+ansible all -m file -a "path=/home/hi.txt state=absent" -b
+
+minion1 | CHANGED => {
+    "changed": true,
+    "path": "/home/hi.txt",
+    "state": "absent"
+}
+minion2 | CHANGED => {
+    "changed": true,
+    "path": "/home/hi.txt",
+    "state": "absent"
+}
+```
+
+Можно повторно запустить эту же команду, и она будет успешно исполнятся, если допустим копируем файл, и такой файл есть, команда выполниться, но ансибл скажет что изменений не было, например запустим повторно предыдущую команду
+```bash
+ansible all -m file -a "path=/home/hi.txt state=absent" -b
+
+minion1 | SUCCESS => {
+    "changed": false,
+    "path": "/home/hi.txt",
+    "state": "absent"
+}
+minion2 | SUCCESS => {
+    "changed": false,
+    "path": "/home/hi.txt",
+    "state": "abssent"
+}
+```
+
+Мы видим что команда успешно выполнилась, но "changed": false, что говорит нам, что изменения не были применены. 
+
+#### get_url
+
+Для скачивания файлов с интернета можно использовать модуль get_url
+```bash
+ansible all -m get_url -a "url=https://raw.githubusercontent.com/pprometey/ansible-learning-template/refs/heads/main/README.md dest=/home/developer"
+```
+
+#### yum, apt
+
+Для установки и удалении приложений на redhat подобные системы, можно использовать модуль yum
+- Установить приложение stress `ansible all -m yum -a "name=stress state=latest" -b`
+- Удалить `ansible all -m yum -a "name=stress state=removed" -b`
+Для debian подобных систем 
+- Установить приложение stress  `ansible all -m apt -a "name=stress state=latest" -b`
+- Удалить приложение - `ansible all -m apt -a "name=stress state=removed" -b`
+
+#### uri
+Модуль для выполнения запросов по http и https. `ansible all -m uri -a "url=https://iit.kz"`, для получения содержимого, нужно указать `return_conent=yes` пример:`ansible all -m uri -a "url=https://iit.kz return_content=yes"`
+
+#### service
+Модуль для управления сервисами, например запустить вебсервер apache и чтобы он автоматически загружался при запуске (при условии что он был ранее установлен) `ansible all -m service -a "name=httpd state=started enabled=yes" -b`, или удалить этот сервис `ansible all -m service -a "name=httpd state=removed" -b`
+
