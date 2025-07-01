@@ -231,7 +231,8 @@ minion1 | CHANGED | rc=0 >>
 
 #### copy
 
-Модуль `copy` позволяет копировать файлы на удаленные машины. 
+Модуль `copy` позволяет копировать файлы на удаленные машины. Предварительно необходимо создать в корневой папке проекта файл hi.txt, который мы будем копировать на другие машины (с любым содержжимым внутри).
+
 ```bash
 ansible all -m copy -a "src=hi.txt dest=/home/developer mode=777"
 
@@ -420,7 +421,7 @@ YAML — это текстовый формат для хранения данн
 В больших проектах,  переменные, относящиеся к хостам рекомендуются хранить в папке `group_vars`. В ней необходимо создать файлы с именем группы, которая указана в файле инвентаризации. 
 
 Вот изначальный файл инвентаризации до переноса переменных в group_vars
-```
+```ini
 [master_servers]
 minion1
 
@@ -439,7 +440,7 @@ ansible_python_interpreter=/usr/bin/python3
 
 Необходимо создать в корне проекта каталог `group_vars`. В нем содаем файл `cluster_servers.yml` переносим из него строки с переменными, заменив =(равно) на :(двоеточие), приведя к yaml формату:
 
-```
+```yaml
 ---
 anisble_username: developer 
 ansible_ssh_private_key_file: /home/developer/.ssh/id_rsa
@@ -447,7 +448,7 @@ ansible_python_interpreter: /usr/bin/python3
 ```
 
 в итоге файл инвентаризации будет таким, без секции `[cluster_servers:vars]`:
-```
+```yaml
 [master_servers]
 minion1
 
@@ -462,4 +463,269 @@ worker_servers
 ### Переменные в host_vars
 Подобно тому, как общие для групп переменные рекомендуется хранить в папке `group_vars`, уникальные для отдельных хостов переменные рекомендуется хранить в каталоге `host_vars`, чтобы не "засорять" файл инвентаризации, который по мере роста проекта может стать сложным для чтения и посиска в нем информации. 
 Ансибл автоматически умеет находить переменные определенные в этих двух каталогах. 
-В каталоге `host_vars` небоходимо содать файл с именем хоста, и в нем в формате yml определить переменные уникальные именно для этого хоста.  
+В каталоге `host_vars` небоходимо содать файл с именем хоста, и в нем в формате yml определить переменные уникальные именно для этого хоста.
+
+## Шаг 4. Плейбуки (Playbooks)
+
+Playbook, это yaml файл, с определенной структурой, в котором указано несколько ansible команд, выполняющие определенную цель. Как правило файлы с плейбуками хранятся каталоге `playbooks` которая находится в корне проекта.
+
+### Первый Playbook
+Напишем первый плейбук, который будет выполнять проверку соединения с хостами, выволнив команду ping, для этого создадим в каталоге `playbooks` файл `ping.yml` со следующим содержимым:
+```yaml
+---
+- name: Test connection to my servers # Имя плейбука
+  hosts: all # к каким хостам применять
+  become: yes # использовать sudo
+
+  tasks: # массив задач плейбука
+  - name: Ping my servers # имя задачи
+    ping: # модуль искользуемый в задаче
+```
+
+Запустим плейбук: `ansible-playbook playbooks/ping.yml`
+```bash
+PLAY [Test connection to my servers] ******************************************************************************************************************************************************************
+
+TASK [Gathering Facts] ********************************************************************************************************************************************************************************
+ok: [minion1]
+ok: [minion2]
+
+TASK [Ping my servers] ********************************************************************************************************************************************************************************
+ok: [minion2]
+ok: [minion1]
+
+PLAY RECAP ********************************************************************************************************************************************************************************************
+minion1                    : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+minion2                    : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+```
+
+### Второй плейбук - установка веб-сервера nginx
+
+Второй плейбук будет выполнять установку веб-сервера на debian совместимые системы. Для этого в каталоге с плейбуками создаим файл с именем `install_nginx.yml` со следующим содержимым:
+```yaml
+---
+- name: Install Nginx on Debian-like systems
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Update apt cache
+      apt: # Обновить кэш apt
+        update_cache: yes # Обновить кэш пакетов, чтобы получить актуальную информацию
+
+    - name: Install nginx 
+      apt: # Установить пакет nginx
+        name: nginx # Указать имя пакета
+        state: present # Убедиться, что пакет установлен
+
+    - name: Ensure nginx is running and enabled
+      service: # Убедиться, что сервис nginx запущен и включён
+        name: nginx # Указать имя сервиса
+        state: started # Убедиться, что сервис запущен
+        enabled: yes # Включить автозапуск при загрузке
+```
+
+Затем выполним плейбук `ansible-playbook playbooks/install_nginx.yml`:
+```bash
+PLAY [Install Nginx on all servers] ******************************
+
+TASK [Gathering Facts] *************************
+ok: [minion2]
+ok: [minion1]
+
+TASK [Update apt cache] *****************************
+changed: [minion2]
+changed: [minion1]
+
+TASK [Install nginx] **********************
+changed: [minion2]
+changed: [minion1]
+
+TASK [Ensure nginx is running and enabled] ***********************
+changed: [minion1]
+changed: [minion2]
+
+PLAY RECAP ***************
+minion1                    : ok=4    changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+minion2                    : ok=4    changed=3    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+```
+
+Можем проверить установку, запросив страничку с вебсервера, как будто бы мы ее открыли в браузере, выполнив для этого команду `curl -l minion1`, и видим ответ, стандартная HTML страница по умолчанию для веб-сервера nginx. Значит nginx установлен и работает. 
+```
+<!DOCTYPE html>
+<html>
+<head>
+<title>Welcome to nginx!</title>
+<style>
+html { color-scheme: light dark; }
+body { width: 35em; margin: 0 auto;
+font-family: Tahoma, Verdana, Arial, sans-serif; }
+</style>
+</head>
+<body>
+<h1>Welcome to nginx!</h1>
+<p>If you see this page, the nginx web server is successfully installed and
+working. Further configuration is required.</p>
+
+<p>For online documentation and support please refer to
+<a href="http://nginx.org/">nginx.org</a>.<br/>
+Commercial support is available at
+<a href="http://nginx.com/">nginx.com</a>.</p>
+
+<p><em>Thank you for using nginx.</em></p>
+</body>
+</html>
+```
+
+### Индепонентность в ansible
+
+Идемпотентность в Ansible означает, что повторный запуск плейбука не изменит систему, если она уже находится в нужном состоянии.
+Коротко:
+- Один и тот же плейбук можно запускать много раз — результат останется одинаковым.
+- Ansible сам проверяет, нужно ли что-то менять (например, не переустанавливает nginx, если он уже установлен).
+- Это делает автоматизацию надёжной и безопасной.
+
+Мы можем повторно запустить плейбук установки веб-сервера nginx  `ansible-playbook playbooks/install_nginx.yml` и увидим:
+```bash
+
+PLAY [Install Nginx on all servers] ***********************************
+
+TASK [Gathering Facts] **********************
+ok: [minion2]
+ok: [minion1]
+
+TASK [Update apt cache] *********************
+ok: [minion2]
+ok: [minion1]
+
+TASK [Install nginx] *********************
+ok: [minion1]
+ok: [minion2]
+
+TASK [Ensure nginx is running and enabled] *******************************************
+ok: [minion2]
+ok: [minion1]
+
+PLAY RECAP ************
+minion1                    : ok=4    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+minion2                    : ok=4    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+```
+
+Если мы сравним этот лог с логом первого запуском плейбука, то заметим разницу, при первом запуске именения применялись (`changed: [имя_хоста]`), а при повтороном уже нет. Вот часть лога первого запуска, где покаано что изменения применились. 
+```bash
+TASK [Update apt cache] *****************************
+changed: [minion2]
+changed: [minion1]
+
+TASK [Install nginx] **********************
+changed: [minion2]
+changed: [minion1]
+
+TASK [Ensure nginx is running and enabled] ***********************
+changed: [minion1]
+changed: [minion2]
+```
+
+Индепонентность даем такие приемущества:
+- Экономит время: Ansible пропускает уже выполненные задачи — плейбук работает быстрее.
+- Безопасно для продакшена: не перезапустит сервис без причины, не удалит и не перезапишет лишнего.
+- Поддержка состояния: Ansible описывает желаемое состояние, а не пошаговые инструкции что нужно сделать. 
+- Можно использовать в cron или CI/CD: повторные запуски не сломают систему.
+
+### Третий плейбук - установка веб-сервера nginx с копированием контента сайта
+
+Третий плейбук будет так же устанавливать веб-сервер nginx, но дефолтную страницу сайта мы заменим на свою. 
+
+В корне проекта создадим каталог `website_content`, в нем создадим файл `index.html`, который будет содержать нашу html страницу с таким содержанием:
+```html
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Hello World</title>
+</head>
+<body>
+  <h1>Hello World</h1>
+</body>
+</html>
+```
+
+Так же в папке c плейбуками создадим еще один плейбук с имененм `install_nginx_content.yml`:
+```yaml
+---
+- name: Install Nginx with content
+  hosts: all
+  become: true
+  
+  vars:
+    source_file: "../website_content/index.html" # Путь к исходному файлу index.html, который будет скопирован на сервер
+    dest_file: "/var/www/html" # Путь назначения для файла index.html на сервере
+
+  tasks:
+    - name: Update apt cache
+      apt: update_cache=yes
+
+    - name: Install nginx 
+      apt: name=nginx state=present
+
+    - name: Copy custom index.html to Nginx web root
+      copy: # Копировать файл index.html
+        src: "{{ source_file }}" # Указать путь к исходному файлу на локальной машине
+        dest: "{{ dest_file }}"  # Указать путь назначения на сервере
+        mode: '0644' # Установить права доступа к файлу
+      notify: Restart Nginx # Уведомить обработчик о необходимости перезапуска Nginx после копирования файла
+
+    - name: Ensure nginx is running and enabled
+      service: name=nginx state=started enabled=yes
+
+  handlers: # Обработчики выполняются только при вызове notify
+    - name: Restart Nginx # Обработчик для перезапуска Nginx
+      service: # Модуль для управления сервисами
+        name: nginx # Указать имя сервиса
+        state: restarted # Перезапустить сервис
+```
+
+В этом плейбуке мы добавили задачу копирования файла с нашей html страницей, которая заменяет дефолтну страницу nginx. В таске копирования мы используем переменные, которые заранее определили, и в которых задаем откуда и куда копировать страницу. Также, в демонстрационных целях добавили обработчик в секцию `handlers`, который перезапускает веб-сервер, после смены дефолтной страницы. Для этого таск копирвоания должен вызвать этот обработчик через инструкцию `notify: Имя_обработчика`.  
+Чтобы не "захламлять" плейбук, обработчики рекомендуется сохранять в предназначенную для этого папку `handlers`, которую рамещают в корне проекта. 
+
+Запустим плейбук  `ansible-playbook playbooks/install_nginx_content.yml`:
+```bash
+PLAY [Install Nginx with content] 
+
+TASK [Gathering Facts] 
+ok: [minion2]
+ok: [minion1]
+
+TASK [Update apt cache] 
+ok: [minion1]
+ok: [minion2]
+
+TASK [Install nginx] 
+ok: [minion1]
+ok: [minion2]
+
+TASK [Copy custom index.html to Nginx web root] 
+changed: [minion2]
+changed: [minion1]
+
+TASK [Ensure nginx is running and enabled] 
+ok: [minion2]
+ok: [minion1]
+
+PLAY RECAP 
+minion1                    : ok=5    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+minion2                    : ok=5    changed=1    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+```
+
+Теперь проверим, запросив нашу страницу с веб-сервера `curl -l minion1`, и мы видим что нам вернулась наша скопированная ранее на веб-сервер страница:
+```bash
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Hello World</title>
+</head>
+<body>
+  <h1>Hello World</h1>
+</body>
+```

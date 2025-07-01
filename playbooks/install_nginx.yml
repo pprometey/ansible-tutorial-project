@@ -1,0 +1,20 @@
+---
+- name: Install Nginx on all servers
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Update apt cache
+      apt: # Обновить кэш apt
+        update_cache: yes # Обновить кэш пакетов, чтобы получить актуальную информацию
+
+    - name: Install nginx 
+      apt: # Установить пакет nginx
+        name: nginx # Указать имя пакета
+        state: present # Убедиться, что пакет установлен
+
+    - name: Ensure nginx is running and enabled
+      service: # Убедиться, что сервис nginx запущен и включён
+        name: nginx # Указать имя сервиса
+        state: started # Убедиться, что сервис запущен
+        enabled: yes # Включить автозапуск при загрузке

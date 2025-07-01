@@ -1,0 +1,7 @@
+- name: Test connection to my servers # Имя плейбука
+  hosts: all # к каким хостам применять
+  become: yes # использовать sudo
+
+  tasks: # массив задач плейбука
+  - name: Ping my servers # имя задачи
+    ping: # модуль искользуемый в задаче

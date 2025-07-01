@@ -1,0 +1,30 @@
+- name: Install Nginx with content
+  hosts: all
+  become: true
+  
+  vars:
+    source_file: "../website_content/index.html" # Путь к исходному файлу index.html, который будет скопирован на сервер
+    dest_file: "/var/www/html" # Путь назначения для файла index.html на сервере
+
+  tasks:
+    - name: Update apt cache
+      apt: update_cache=yes
+
+    - name: Install nginx 
+      apt: name=nginx state=present
+
+    - name: Copy custom index.html to Nginx web root
+      copy: # Копировать файл index.html
+        src: "{{ source_file }}" # Указать путь к исходному файлу на локальной машине
+        dest: "{{ dest_file }}"  # Указать путь назначения на сервере
+        mode: '0644' # Установить права доступа к файлу
+      notify: Restart Nginx # Уведомить обработчик о необходимости перезапуска Nginx после копирования файла
+
+    - name: Ensure nginx is running and enabled
+      service: name=nginx state=started enabled=yes
+
+  handlers: # Обработчики выполняются только при вызове notify
+    - name: Restart Nginx # Обработчик для перезапуска Nginx
+      service: # Модуль для управления сервисами
+        name: nginx # Указать имя сервиса
+        state: restarted # Перезапустить сервис
