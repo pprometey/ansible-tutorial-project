@@ -1,0 +1,25 @@
+{
+  "name": "Debian 13 + Ansible (venv)",
+  "dockerComposeFile": "docker-compose.yml", 
+  "service": "ansible-learning-template-controller", 
+  "workspaceFolder": "/home/developer/${localWorkspaceFolderBasename}", 
+  "remoteUser": "developer",
+  "containerUser": "developer",
+  "features": {},
+  "runArgs": ["--dns", "8.8.8.8"],
+  "mounts": [
+    "source=${localWorkspaceFolder},target=/home/developer/${localWorkspaceFolderBasename},type=bind",
+    "source=${localEnv:DEFAULT_SSH_KEY}/id_rsa,target=/mnt/keys/id_rsa,type=bind,readonly",
+    "source=${localEnv:DEFAULT_SSH_KEY}/id_rsa.pub,target=/mnt/keys/id_rsa.pub,type=bind,readonly"
+  ],
+  "postStartCommand": ".devcontainer/post-start.sh",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash",
+        "terminal.integrated.defaultProfile.linux": "bash",
+        "python.defaultInterpreterPath": "/home/developer/.venv/bin/python"
+      }
+    }
+  }
+}

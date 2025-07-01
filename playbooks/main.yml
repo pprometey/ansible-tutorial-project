@@ -1,0 +1,6 @@
+- name: Base setup for ansible-learning-template
+  hosts: all
+  become: true
+  tasks:
+    - name: Ping
+      ansible.builtin.ping:

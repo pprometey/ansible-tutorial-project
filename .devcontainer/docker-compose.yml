@@ -1,0 +1,25 @@
+version: '2.4'
+
+services:
+  ansible-learning-template-controller:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    depends_on:
+      - ansible-learning-template-minion1
+      - ansible-learning-template-minion2
+
+  ansible-learning-template-minion1:
+    build:
+      context: .
+      dockerfile: Dockerfile.minion
+    image: ansible-learning-template-minion:latest
+    container_name: minion1
+    volumes:
+      - ${DEFAULT_SSH_KEY}/id_rsa.pub:/mnt/keys/id_rsa.pub:ro
+
+  ansible-learning-template-minion2:
+    image: ansible-learning-template-minion:latest
+    container_name: minion2
+    volumes:
+      - ${DEFAULT_SSH_KEY}/id_rsa.pub:/mnt/keys/id_rsa.pub:ro

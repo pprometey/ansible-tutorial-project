@@ -1,0 +1,35 @@
+FROM pprometey/debian-trixie-base:latest
+
+USER root
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends openssh-server && \
+    mkdir -p /var/run/sshd && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
+
+RUN sed -i 's/#PermitRootLogin prohibit-password/PermitRootLogin no/' /etc/ssh/sshd_config && \
+    sed -i 's/#PasswordAuthentication yes/PasswordAuthentication no/' /etc/ssh/sshd_config && \
+    sed -i 's/#PubkeyAuthentication yes/PubkeyAuthentication yes/' /etc/ssh/sshd_config
+
+RUN echo '#!/bin/bash\n\
+set -e\n\
+\n\
+if [ -f /mnt/keys/id_rsa.pub ]; then\n\
+    echo "Setting up SSH keys..."\n\
+    mkdir -p /home/developer/.ssh\n\
+    cp /mnt/keys/id_rsa.pub /home/developer/.ssh/authorized_keys\n\
+    chmod 600 /home/developer/.ssh/authorized_keys\n\
+    chown developer:developer /home/developer/.ssh/authorized_keys\n\
+    echo "SSH keys configured successfully"\n\
+else\n\
+    echo "Warning: SSH public key not found at /mnt/keys/id_rsa.pub"\n\
+fi\n\
+\n\
+
+echo "Starting SSH server..."\n\
+exec /usr/sbin/sshd -D' > /usr/local/bin/entrypoint.sh && \
+    chmod +x /usr/local/bin/entrypoint.sh
+
+EXPOSE 22
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
