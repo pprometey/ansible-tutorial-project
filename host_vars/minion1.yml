@@ -1,1 +1,2 @@
 minion1_var: "the minion1 var"
+owner: "Alex form host_vars"

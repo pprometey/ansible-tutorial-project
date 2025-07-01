@@ -1,8 +1,8 @@
 [master_servers]
-minion1
+minion1 owner="Alex form inventory"
 
 [worker_servers]
-minion2
+minion2 owner="Maxim form inventory"
 
 [cluster_servers:children]
 master_servers

@@ -1,0 +1,45 @@
+---
+- name: Playbook to demonstrating working with variables
+  hosts: all
+  become: true
+
+  vars:
+    message1: "Hello" # Переменные можно задавать в самом плейбуке
+    message2: "World"
+    my_var1: "The my variable"
+
+  tasks:
+    - name: Print the value of my_var1 via var
+      debug: # Команда debug выводит значение переменной на экран
+        var: my_var1 # var позволяет вывести значение переменной на экран
+
+    - name: Print the value of my_var1 via msg
+      debug: # Команда debug также позволяет вывести значение переменной в строке
+        msg: "The value of my_var1 is: {{ my_var1 }}"  # msg позволяет вывести значение переменной в строке
+
+    - debug:
+        msg: "Owner of this server: {{ owner }}" # Переменная owner определена в инвентарном файле, и host_vars и будет подставлена в строку
+
+    - name: "Set a new variable using set_fact"
+      set_fact: my_new_varitable="{{ message1 }} {{ message2 }} from {{ owner }}"
+      # Команда set_fact позволяет создать новую переменную my_new_varitable, 
+      # которая будет содержать значение переменных message1 и message2, а также owner.
+      # Эта переменная будет доступна в последующих задачах плейбука.
+
+    - debug:
+        var: my_new_varitable # Выводим значение переменной my_new_varitable на экран
+
+    - debug: 
+        var: ansible_memfree_mb # Переменная (факт) ansible_memfree_mb содержит значение свободной памяти на сервере в мегабайтах
+    
+    - name: "Get uptime of the server using shell module and register the result"
+      shell: uptime # выполняем команду uptime на сервере через модуль shell
+      register: uptime_result # Результат выполнения команды будет сохранен в переменную uptime_result
+
+    - name: "Print the uptime_result of the server"
+      debug:
+        var: uptime_result # Выводим значение переменной uptime_result на экран
+
+    - name: "Print the uptime_result.stdout" # 
+      debug:
+        msg: "Uptime of the server is: {{ uptime_result.stdout }}" # Выводим значение переменной uptime_result.stdout на экран
