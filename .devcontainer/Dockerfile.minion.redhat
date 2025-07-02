@@ -1,0 +1,32 @@
+FROM pprometey/rockylinux-9-basee:latest
+
+USER root
+
+RUN dnf -y install openssh-server && \
+    dnf clean all && \
+    mkdir -p /var/run/sshd
+
+RUN sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config && \
+    sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config && \
+    sed -i 's/^#\?PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config && \
+    ssh-keygen -A
+
+RUN printf '#!/bin/bash\n\
+set -e\n\
+\n\
+if [ -f /mnt/keys/id_rsa.pub ]; then\n\
+    echo "Setting up SSH keys..."\n\
+    cp /mnt/keys/id_rsa.pub /home/developer/.ssh/authorized_keys\n\
+    chmod 600 /home/developer/.ssh/authorized_keys\n\
+    chown developer:developer /home/developer/.ssh/authorized_keys\n\
+    echo "SSH keys configured successfully"\n\
+else\n\
+    echo "Warning: SSH public key not found at /mnt/keys/id_rsa.pub"\n\
+fi\n\
+\n\
+echo "Starting SSH server..."\n\
+exec /usr/sbin/sshd -D\n' > /usr/local/bin/entrypoint.sh && \
+    chmod +x /usr/local/bin/entrypoint.sh
+
+EXPOSE 22
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]

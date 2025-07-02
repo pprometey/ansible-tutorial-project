@@ -1,0 +1,40 @@
+- name: Install Nginx with content to a redHat-like system and debian-like system
+  hosts: all
+  become: true
+  
+  vars:
+    source_file: "../website_content/index.html" 
+    dest_file: "/var/www/html"
+    dest_file_redhat: "/usr/share/nginx/html" # Путь назначения для файла index.html на RedHat-подобных системах
+
+  tasks:
+    - name: Ensure the Nginx package is installed # Убедиться, что пакет nginx установлен
+      package: # Модуль для управления пакетами
+        name: nginx # Имя пакета для установки
+        state: present # Убедиться, что пакет установлен
+        update_cache: yes # Обновить кэш пакетов перед установкой
+
+    - block: # Копирование файла index.html и запуск Nginx на Debian-подобных системах
+      - name: Copy custom index.html to Nginx web root on Debian-like systems
+        copy: 
+          src: "{{ source_file }}" 
+          dest: "{{ dest_file }}" 
+          mode: '0644' 
+
+      - name: Ensure nginx is running and enabled 
+        service: name=nginx state=started enabled=yes
+      when: ansible_os_family == "Debian"
+
+    - block: # Копирование файла index.html и запуск Nginx на RedHat-подобных системах
+      - name: Copy custom index.html to Nginx web root on RedHat-like systems
+        copy: 
+          src: "{{ source_file }}" 
+          dest: "{{ dest_file_redhat }}" 
+          mode: '0644' 
+        when: ansible_os_family == "RedHat" 
+
+      - name:  Reload or start nginx in container 
+        shell: |
+          nginx -t && nginx -s reload || nginx
+        ignore_errors: true
+      when: ansible_os_family == "RedHat"

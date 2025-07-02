@@ -1,4 +1,4 @@
-# Шаги по изучению
+# Шаги по изучению Ansibled
 
 Ansible - is Automation Configuration Management Tools (ACMT) - Инструмент автоматизации управления конфигурацией.
 
@@ -1085,4 +1085,207 @@ ok: [minion2] => {
 - changed — был ли выполнен changed
 - stdout_lines — список строк из stdout
 То есть `register` — это способ сохранить вывод команды и использовать его позже.
+
+## Шаг 6. Шаблонизатор Jinja2, условия (when) и блоки (block)
+
+### Шаблонизатор Jinja2
+
+Jinja2 — это шаблонизатор, используемый в Ansible для вставки переменных, условий и циклов в YAML-файлы.
+Используется для:
+- Определения переменных:
+  - {{ variable_name }}
+- Фильтров:
+  - {{ list | length }}
+  - {{ name | upper }}
+- Условий:
+  - {% if var == "value" %}...{% endif %}
+- Циклов:
+  - {% for item in list %}...{% endfor %}
+- Тестов:
+  - {{ var is defined }}
+  - {{ var is not none }}
+
+Наиболее частые примеры использования
+```yaml
+when: my_var == "value"  # Выполнить задачу только если переменная my_var равна "value"
+with_items: "{{ my_list }}"  # Перебрать элементы из списка my_list (устаревший способ, но до сих пор используется в старом коде)
+loop: "{{ my_list }}"  # Современный способ организации цикла по элементам списка my_list (предпочтительно использовать вместо with_items)
+```
+Работает внутри {{ ... }} или {% ... %} — шаблонов.
+
+
+### Условия when
+
+Добавим новый хост `minion3` которым мы будем управлять на базе redhat-like дистрибутива в инвентори файл `hosts`
+```ini
+...
+[worker_servers]
+minion2 owner="Maxim form inventory"
+minion3
+...
+```
+
+Далее напишем новый плейбук устанвоки nginix `install_nginix_when.yml`. Так как minion3 имеет другой linux дистрибутив, прежний наш плейбук выстаст ошибку, при поытке использовать модуль apt, так как он использует другой менеджер пакетов. И здесь на поможет директива `when`, которая используется для условного выполнения задач, хендлеров или ролей.
+```yaml
+- name: Install Nginx with content to a redHat-like system and debian-like system
+  hosts: all
+  become: true
+  
+  vars:
+    source_file: "../website_content/index.html" 
+    dest_file: "/var/www/html"
+    dest_file_redhat: "/usr/share/nginx/html" # Путь назначения для файла index.html на RedHat-подобных системах
+
+  tasks:
+    - name: Update apt cache  # Обновить кэш apt перед установкой пакетов
+      apt: # Модуль для управления пакетами в Debian-подобных системах
+        update_cache: yes # Обновить кэш перед установкой пакетов
+      when: ansible_os_family == "Debian" # Выполнить задачу только для Debian-подобных систем
+
+    - name: Install nginx on Debian-like systems # Установить пакет nginx на Debian-подобных системах
+      apt: 
+        name: nginx # Установить пакет nginx
+        state: present # Убедиться, что пакет установлен 
+      when: ansible_os_family == "Debian"
+
+    - name: Install EPEL repository # Установить EPEL репозиторий для RedHat-подобных систем
+      dnf: # Модуль для управления пакетами в RedHat-подобных системах
+        name: epel-release # Установить пакет epel-release, который предоставляет доступ к EPEL репозиторию
+        state: present 
+      when: ansible_os_family == "RedHat" # Выполнить задачу только для RedHat-подобных систем
+
+    - name: Install nginx on RedHat-like systems # Установить пакет nginx на RedHat-подобных системах
+      dnf: 
+        name: nginx
+        state: present
+      when: ansible_os_family == "RedHat" 
+
+    - name: Copy custom index.html to Nginx web root on Debian-like systems
+      copy: 
+        src: "{{ source_file }}" 
+        dest: "{{ dest_file }}" 
+        mode: '0644' 
+      when: ansible_os_family == "Debian"
+
+    - name: Copy custom index.html to Nginx web root on RedHat-like systems
+      copy: 
+        src: "{{ source_file }}" 
+        dest: "{{ dest_file_redhat }}" 
+        mode: '0644' 
+      when: ansible_os_family == "RedHat" 
+
+    - name: Ensure nginx is running and enabled 
+      service: name=nginx state=started enabled=yes
+      when: ansible_os_family == "Debian" 
+
+    - name:  Reload or start nginx in container 
+      shell: |
+        nginx -t && nginx -s reload || nginx
+      ignore_errors: true
+      when: ansible_os_family == "RedHat"
+```
+Запустим плейбук `ansible-playbook playbooks/install_nginix_when.yml`. Анализируя вывод, мы можем заметить что благодаря директиве `when`, задачи преднаначенные для debian-like хостов пропускаются на хосте с redhat-like системой, и наборот. 
+
+```bash
+TASK [Update apt cache] 
+skipping: [minion3]
+ok: [minion1]
+ok: [minion2]
+
+TASK [Install nginx on Debian-like systems] 
+skipping: [minion3]
+changed: [minion2]
+changed: [minion1]
+
+TASK [Install EPEL repository] 
+skipping: [minion1]
+skipping: [minion2]
+ok: [minion3]
+
+TASK [Install nginx on RedHat-like systems] 
+skipping: [minion1]
+skipping: [minion2]
+changed: [minion3]
+
+TASK [Copy custom index.html to Nginx web root on Debian-like systems] 
+skipping: [minion3]
+ok: [minion1]
+ok: [minion2]
+
+TASK [Copy custom index.html to Nginx web root on RedHat-like systems] 
+skipping: [minion1]
+skipping: [minion2]
+changed: [minion3]
+```
+
+Но в нашем плейбуке много лишнего и дублирующего кода. Мы может сократить и огранизовать плейбук более изящно, если будем испольовать директиву `block`.
+
+### Директива block
+
+Директива `block` группирует задачи в единный блок, к которому можно применить when, become, tags и другие, к блокам можно применять директивы `rescue` и `always` для обработки ошибок.
+```yaml
+- name: Пример использования block/rescue/always
+  block:
+    - name: Задача 1
+      command: /bin/true 
+    - name: Задача 2
+      command: /bin/false
+  rescue:
+    - name: Задача обработка ошибки
+      debug:
+        msg: "Произошла ошибка"
+  always:
+    - name: Задача всегда выполняется
+      debug:
+        msg: "Завершение блока"
+```
+Блоки могут быть вложенными друг в друга. Ключевые моменты по вложенности блоков:
+- **Иерархия**: Задачи внутри block являются дочерними по отношению к этому блоку. Внутренний block является дочерним по отношению к внешнему block.
+- **Применение параметров**: Параметры, примененные к внешнему блоку (например, when), будут влиять на все задачи внутри него, включая задачи во вложенных блоках. Параметры, примененные к внутреннему блоку, будут влиять только на его задачи. Если параметры конфликтуют, параметры внутреннего блока имеют приоритет.
+- **Обработка ошибок (rescue/always)**: Секции rescue и always всегда относятся к ближайшему родительскому block. Если задача во внутреннем блоке завершается с ошибкой, будет активирована секция rescue этого внутреннего блока (если она есть). Если её нет, ошибка "пропагерирует" к следующему внешнему блоку, пока не будет найдена секция rescue или пока ошибка не достигнет уровня плейбука.
+
+Перепишем плейбук с использованием директивы `block` - `install_nginx_block.yml`, а также вместо использования специфических модулей установки пакетов (apt, dnf), используем модуль `package` который является универсальным и работает с различными системами управления пакетами (например, apt для Debian/Ubuntu, yum/dnf для CentOS/RHEL, pacman для Arch Linux и т.д.). Ansible сам определит, какой менеджер пакетов используется на целевом сервере, и выполнит соответствующую команду.
+```yaml
+- name: Install Nginx with content to a redHat-like system and debian-like system
+  hosts: all
+  become: true
+  
+  vars:
+    source_file: "../website_content/index.html" 
+    dest_file: "/var/www/html"
+    dest_file_redhat: "/usr/share/nginx/html" # Путь назначения для файла index.html на RedHat-подобных системах
+
+  tasks:
+    - name: Ensure the Nginx package is installed # Убедиться, что пакет nginx установлен
+      package: # Модуль для управления пакетами
+        name: nginx # Имя пакета для установки
+        state: present # Убедиться, что пакет установлен
+        update_cache: yes # Обновить кэш пакетов перед установкой
+
+    - block: # Копирование файла index.html и запуск Nginx на Debian-подобных системах
+      - name: Copy custom index.html to Nginx web root on Debian-like systems
+        copy: 
+          src: "{{ source_file }}" 
+          dest: "{{ dest_file }}" 
+          mode: '0644' 
+
+      - name: Ensure nginx is running and enabled 
+        service: name=nginx state=started enabled=yes
+      when: ansible_os_family == "Debian"
+
+    - block: # Копирование файла index.html и запуск Nginx на RedHat-подобных системах
+      - name: Copy custom index.html to Nginx web root on RedHat-like systems
+        copy: 
+          src: "{{ source_file }}" 
+          dest: "{{ dest_file_redhat }}" 
+          mode: '0644' 
+        when: ansible_os_family == "RedHat" 
+
+      - name:  Reload or start nginx in container 
+        shell: |
+          nginx -t && nginx -s reload || nginx
+        ignore_errors: true
+      when: ansible_os_family == "RedHat"
+```
+Код плейбука получился более комактным и выразительным. 
 

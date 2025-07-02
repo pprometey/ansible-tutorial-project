@@ -8,6 +8,7 @@ services:
     depends_on:
       - ansible-learning-template-minion1
       - ansible-learning-template-minion2
+      - ansible-learning-template-minion3
 
   ansible-learning-template-minion1:
     build:
@@ -15,11 +16,25 @@ services:
       dockerfile: Dockerfile.minion
     image: ansible-learning-template-minion:latest
     container_name: minion1
+    ports:
+      - "8081:80"
     volumes:
       - ${DEFAULT_SSH_KEY}/id_rsa.pub:/mnt/keys/id_rsa.pub:ro
 
   ansible-learning-template-minion2:
     image: ansible-learning-template-minion:latest
     container_name: minion2
+    ports:
+      - "8082:80"
+    volumes:
+      - ${DEFAULT_SSH_KEY}/id_rsa.pub:/mnt/keys/id_rsa.pub:ro
+
+  ansible-learning-template-minion3:
+    build:
+      context: .
+      dockerfile: Dockerfile.minion.redhat
+    container_name: minion3
+    ports:
+      - "8083:80"
     volumes:
       - ${DEFAULT_SSH_KEY}/id_rsa.pub:/mnt/keys/id_rsa.pub:ro

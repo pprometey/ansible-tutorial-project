@@ -6,6 +6,7 @@
     source_file: "../website_content/index.html" # Путь к исходному файлу index.html, который будет скопирован на сервер
     dest_file: "/var/www/html" # Путь назначения для файла index.html на сервере
 
+
   tasks:
     - name: Update apt cache
       apt: update_cache=yes

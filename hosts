@@ -3,6 +3,7 @@ minion1 owner="Alex form inventory"
 
 [worker_servers]
 minion2 owner="Maxim form inventory"
+minion3
 
 [cluster_servers:children]
 master_servers
