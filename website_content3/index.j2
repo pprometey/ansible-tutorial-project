@@ -1,0 +1,14 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Hello World</title>
+</head>
+<body>
+  <h1>Hello World</h1>
+  <p>Server owner: {{ owner }}</p>
+  <p>Server hostname: {{ ansible_hostname }}</p>
+  <p>Server OS famely: {{ ansible_os_family }}</p>
+  <p>Server uptime: {{ (ansible_uptime_seconds // 3600) }} h {{ (ansible_uptime_seconds % 3600) // 60 }} min</p>
+</body>
+</html>

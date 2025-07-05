@@ -1,0 +1,36 @@
+- name: Install Nginx with content on RedHat-like and Debian-like systems 
+  hosts: all
+  become: true
+  
+  vars:
+    source_file: "../website_content3/index.j2" # Путь к шаблону 
+    dest_file: "/var/www/html"
+    dest_file_redhat: "/usr/share/nginx/html" 
+
+  tasks:
+    - name: Ensure the Nginx package is installed 
+      package: name=nginx state=present update_cache=yes 
+
+    - block:
+      - name: Generate index.html to Nginx web root on Debian-like systems
+        template: # генерируем файл по шаблону, перменные автоматически подставятся
+          src: "{{ source_file }}" 
+          dest: "{{ dest_file }}/index.html" # Путь к сгенерированному файлу
+          mode: '0644' 
+
+      - name: Ensure nginx is running and enabled 
+        service: name=nginx state=started enabled=yes
+      when: ansible_os_family == "Debian"
+
+    - block: 
+      - name:  Generate index.html to Nginx web root on RedHat-like systems
+        template:  # генерируем файл по шаблону, перменные автоматически подставятся
+          src: "{{ source_file }}" 
+          dest: "{{ dest_file_redhat }}/index.html" # Путь к сгенерированному файлу
+          mode: '0644' 
+
+      - name:  Reload or start nginx in container 
+        shell: |
+          nginx -t && nginx -s reload || nginx
+        ignore_errors: true
+      when: ansible_os_family == "RedHat"
