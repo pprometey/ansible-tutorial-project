@@ -1,4 +1,4 @@
-- name: Install Nginx with content to a redHat-like system and debian-like system
+- name: Install Nginx with content on RedHat-like and Debian-like systems 
   hosts: all
   become: true
   
@@ -31,7 +31,6 @@
           src: "{{ source_file }}" 
           dest: "{{ dest_file_redhat }}" 
           mode: '0644' 
-        when: ansible_os_family == "RedHat" 
 
       - name:  Reload or start nginx in container 
         shell: |

@@ -1,0 +1,36 @@
+---
+- name: Looops Playbooks
+  hosts: minion1  # ограничим выполенение одним хостом
+  become: yes
+
+  tasks:
+  - name: Say Hello
+    debug: msg="Hello {{ item }}"
+    #with_items: //использовалась до верси ansible 2.5
+    loop: 
+      - "Alex"
+      - "Max"
+      - "Katya"
+      - "Mery"
+
+  # Обновляем кеш пакетов один раз, чтобы не выполнять при каждом шаге цикла
+  - name: Update package cache on Debian-based systems
+    apt:
+      update_cache: yes
+    when: ansible_os_family == "Debian"
+
+  - name: Update package cache on RedHat-based systems
+    yum:
+      update_cache: yes
+    when: ansible_os_family == "RedHat"
+
+  # Выполняем установку пакетов в цикле
+  - name: Install many packarges
+    packarge: name={{ item }} state=present update_cache=no
+    loop: 
+      - tree
+      - tmux
+      - curl
+      - tcpdump
+      - dnsutils 
+      - nmap

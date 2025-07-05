@@ -1,0 +1,16 @@
+---
+- name: Until Playbook
+  hosts: minion1
+  become: yes
+
+  tasks:
+    - name: until loop example                                  # Добавлем букву А в файл, пока не станет ААААА
+      shell: echo -n A >> until_demo.txt && cat until_demo.txt  # Добавляет 'A' без символа окончания строки и выводит содержимое файла
+      register: result                                          # Сохраняем результат
+      retries: 10                                               # До 10 повторов
+      delay: 1                                                  # Пауза 1 секунда
+      until: result.stdout.find('AAAAA') == false               # Повторять, пока 'AAAAA' не найдено
+
+    - name: Show current counter value
+      debug:
+        msg: "Current value: {{ result.stdout }}"
