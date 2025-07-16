@@ -6,12 +6,14 @@
 </head>
 <body>
   <h1>Hello World</h1>
+
   <p>Server owner: {{ owner }}</p>
   <p>Server hostname: {{ ansible_hostname }}</p>
   <p>Server OS famely: {{ ansible_os_family }}</p>
   <p>Server uptime: {{ (ansible_uptime_seconds // 3600) }} h {{ (ansible_uptime_seconds % 3600) // 60 }} min</p>
-  <img width="300" src="image1.jpeg" alt="Example Image">
-  <br />
+
+   <img width="300" src="image1.jpeg" alt="Example Image">
+   <br />
    <img width="300"  src="image2.png" alt="Example Image 2">
 </body>
 </html>

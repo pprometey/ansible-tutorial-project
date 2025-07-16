@@ -4,7 +4,7 @@
   
   vars:
     source_file: "../website_content/index.html" 
-    dest_file: "/var/www/html"
+    dest_file_debian: "/var/www/html" # Путь назначения для файла index.html на Debian-подобных системах
     dest_file_redhat: "/usr/share/nginx/html" # Путь назначения для файла index.html на RedHat-подобных системах
 
   tasks:
@@ -34,7 +34,7 @@
     - name: Copy custom index.html to Nginx web root on Debian-like systems
       copy: 
         src: "{{ source_file }}" 
-        dest: "{{ dest_file }}" 
+        dest: "{{ dest_file_debian }}" 
         mode: '0644' 
       when: ansible_os_family == "Debian"
 
@@ -47,10 +47,3 @@
 
     - name: Ensure nginx is running and enabled 
       service: name=nginx state=started enabled=yes
-      when: ansible_os_family == "Debian" 
-
-    - name:  Reload or start nginx in container 
-      shell: |
-        nginx -t && nginx -s reload || nginx
-      ignore_errors: true
-      when: ansible_os_family == "RedHat"

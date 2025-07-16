@@ -1,0 +1,7 @@
+---
+- name: Install Nginx using a Role on RedHat- and Debian-based Systems
+  hosts: all
+  become: true
+
+  roles:
+    - { role: deploy_nginix_with_content, when ansible_system == 'Linux' }

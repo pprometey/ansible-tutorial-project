@@ -1,0 +1,4 @@
+roles:
+  - name: robertdebock.users_requirements
+    src: robertdebock.users
+    version: 6.1.5

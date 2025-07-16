@@ -1,4 +1,4 @@
-# Шаги по изучению Ansibled
+# Шаги по изучению Ansible
 
 Ansible - is Automation Configuration Management Tools (ACMT) - Инструмент автоматизации управления конфигурацией.
 
@@ -21,11 +21,11 @@ Ansible - is Automation Configuration Management Tools (ACMT) - Инструме
 
 ## Установка Ansible
 
-Инструкция по установке с официального сайта: https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html
+Инструкция по установке с официального сайта: <https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html>
 
 ### Debian
 
-```
+```sh
 Sudo install gpupg
 sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
 echo "deb [http://ppa.launchpad.net/ansible/ansible/ubuntu](http://ppa.launchpad.net/ansible/ansible/ubuntu) trusty main" | sudo tee -a /etc/apt/sources.list
@@ -88,7 +88,7 @@ minion1 | SUCCESS => {
 
 Во время первого подключюения будет сделан запрос на добавления хоста в known_hosts - это механизм безопасности SSH.
 
-```
+```sh
 The authenticity of host 'minion2 (172.18.0.2)' can't be established.
 ED25519 key fingerprint is SHA256:WW96QnhRxdH6bes4Jb7XizPiJxmICoQUu/dDokoRm/M.
 This key is not known by any other names.
@@ -102,7 +102,7 @@ Are you sure you want to continue connecting (yes/no/[fingerprint])?
 - Если вы соглашаетесь, ключ сервера сохраняется в файл ~/.ssh/known_hosts на вашем компьютере.
 - При следующих подключениях SSH проверяет, что ключ сервера совпадает с сохранённым - чтобы убедиться, что вы подключаетесь именно к тому же серверу, а не к злоумышленнику (защита от MITM-атак).
 
-Мы можем настроить чтобы ансибл автоматически принимал ключи новых хостов, но в производственной среде так делать крайне не рекомендуется. 
+Мы можем настроить чтобы ансибл автоматически принимал ключи новых хостов, но в производственной среде так делать крайне не рекомендуется.
 
 Для этого создадим файл конфигурации для ансибл `ansible.cfg` в корне проекта с содержимым:
 
@@ -139,7 +139,7 @@ hostname ansible_host=10.0.15.12
 
 В команде ansible по умолчанию доступны изначально два параметра, для указания к каким хостам применять инструкции:
 
--  **`all`** - в которую включены все хосты перечисленные в файле инвентаризации
+- **`all`** - в которую включены все хосты перечисленные в файле инвентаризации
 - **`ungrouped`** - хосты которые не включены ни в одну группу
 
 Чтобы посмотреть список групп в файле инвентаризации нужно выполнить команду `ansible-inventory --list`, которая покажет все группы и переменные доступные этим группам, либо команду `ansible-inventory --graph`:
@@ -218,7 +218,7 @@ ansible_python_interpreter=/usr/bin/python3
 
 ## Шаг 2. Выполнение ad-hoc команд и основные модули ansible
 
-ad-hoc команды, это команды которые выполняются напрямую, как параметры ansible в командной строке. Любые действия ансибл выполянет посредством модулей. 
+ad-hoc команды, это команды которые выполняются напрямую, как параметры ansible в командной строке. Любые действия ансибл выполянет посредством модулей.
 
 Простейший пример `ansible all -m ping`, где мы говорим ансибл выполнить на всех серверах в указанных в инвентори файле модуль ping, котоырй выполнит соответствущу команду.
 
@@ -230,7 +230,7 @@ ad-hoc команды, это команды которые выполняютс
 
 #### setup
 
-Модуль `setup` - `ansible master_servers -m setup` выдает много информации о хосте и его настройках. 
+Модуль `setup` - `ansible master_servers -m setup` выдает много информации о хосте и его настройках.
 
 #### shell
 
@@ -359,7 +359,7 @@ minion2 | SUCCESS => {
 }
 ```
 
-Мы видим что команда успешно выполнилась, но "changed": false, что говорит нам, что изменения не были применены. 
+Мы видим что команда успешно выполнилась, но "changed": false, что говорит нам, что изменения не были применены.
 
 #### get_url
 
@@ -405,7 +405,7 @@ YAML - это текстовый формат для хранения данны
 6. Для краткой записи списков можно использовать квадратные скобки:  `skills: [Python, C#, YAML]` . Это эквивалентно многострочной записи через `-`.
 7. Если в значении есть двоеточие (`:`), ставь кавычки (двойные или одинарные):  `nikname: "Anton: god"` - иначе будет ошибка.
 
-Пример, все 4 записи одной и той же информации валидны. 
+Пример, все 4 записи одной и той же информации валидны.
 
 ```yaml
 ---
@@ -430,19 +430,23 @@ YAML - это текстовый формат для хранения данны
 ...
 ```
 
-Одинарные кавычки `'...'`
+Одинарные кавычки `'...'`:
 
 - Всё внутри воспринимается буквально - никаких спецсимволов или экранирования.
 - Чтобы вставить саму одинарную кавычку, её нужно удвоить:  
     Пример: `'Это ''пример'' текста'` -> `Это 'пример' текста`.
 - Нельзя делать переносы строк внутри одинарных кавычек.
-Двойные кавычки `"..."`
+
+Двойные кавычки `"..."`:
+
 - Позволяют использовать escape-последовательности (как в языках программирования):
   - `\n` - перенос строки
   - `\t` - табуляция
   - `\"` - двойная кавычка внутри строки
 - Можно делать многострочные строки с помощью специальных приёмов.
-Итог
+
+**Итог**:
+
 - Если нужна простая строка без специальных символов - лучше одинарные кавычки.
 - Если нужно вставить перенос строки или спецсимволы - двойные.
 - Обе кавычки позволяют защищать двоеточия и другие спецсимволы в значениях.
@@ -674,7 +678,7 @@ changed: [minion2]
 
 ### Третий плейбук - установка веб-сервера nginx с копированием контента сайта
 
-Третий плейбук будет так же устанавливать веб-сервер nginx, но дефолтную страницу сайта мы заменим на свою. 
+Третий плейбук будет так же устанавливать веб-сервер nginx, но дефолтную страницу сайта мы заменим на свою.
 
 В корне проекта создадим каталог `website_content`, в нем создадим файл `index.html`, который будет содержать нашу html страницу с таким содержанием:
 
@@ -781,7 +785,7 @@ minion2                    : ok=5    changed=1    unreachable=0    failed=0    s
 ### Переопределение переменных
 
 Переменные можно определять в различных частях проекта, и в том числе переопределять значение одно и той же переменной.
-Нииже показано, в какой очередности будет переопределятся значение переменной, если мы переопределим ее в разных местах. 
+Нииже показано, в какой очередности будет переопределятся значение переменной, если мы переопределим ее в разных местах.
 
 ```yaml
 # roles/myrole/defaults/main.yml
@@ -1159,7 +1163,7 @@ minion3
 ...
 ```
 
-Далее напишем новый плейбук устанвоки nginix `install_nginix_when.yml`. Так как minion3 имеет другой linux дистрибутив, прежний наш плейбук выстаст ошибку, при поытке использовать модуль apt, так как он использует другой менеджер пакетов. И здесь на поможет директива `when`, которая используется для условного выполнения задач, хендлеров или ролей.
+Далее напишем новый плейбук устанвоки nginix `install_nginx_when.yml`. Так как minion3 имеет другой linux дистрибутив, прежний наш плейбук выстаст ошибку, при попытке использовать модуль apt, так как он использует другой менеджер пакетов. И здесь на поможет директива `when`, которая используется для условного выполнения задач, хендлеров или ролей.
 
 ```yaml
 - name: Install Nginx with content to a redHat-like system and debian-like system
@@ -1168,7 +1172,7 @@ minion3
   
   vars:
     source_file: "../website_content/index.html" 
-    dest_file: "/var/www/html"
+    dest_file_debian: "/var/www/html" # Путь назначения для файла index.html на Debian-подобных системах
     dest_file_redhat: "/usr/share/nginx/html" # Путь назначения для файла index.html на RedHat-подобных системах
 
   tasks:
@@ -1198,7 +1202,7 @@ minion3
     - name: Copy custom index.html to Nginx web root on Debian-like systems
       copy: 
         src: "{{ source_file }}" 
-        dest: "{{ dest_file }}" 
+        dest: "{{ dest_file_debian }}" 
         mode: '0644' 
       when: ansible_os_family == "Debian"
 
@@ -1211,16 +1215,9 @@ minion3
 
     - name: Ensure nginx is running and enabled 
       service: name=nginx state=started enabled=yes
-      when: ansible_os_family == "Debian" 
-
-    - name:  Reload or start nginx in container 
-      shell: |
-        nginx -t && nginx -s reload || nginx
-      ignore_errors: true
-      when: ansible_os_family == "RedHat"
 ```
 
-Запустим плейбук `ansible-playbook playbooks/install_nginix_when.yml`. Анализируя вывод, мы можем заметить что благодаря директиве `when`, задачи преднаначенные для debian-like хостов пропускаются на хосте с redhat-like системой, и наборот. 
+Запустим плейбук `ansible-playbook playbooks/install_nginx_when.yml`. Анализируя вывод, мы можем заметить что благодаря директиве `when`, задачи преднаначенные для debian-like хостов пропускаются на хосте с redhat-like системой, и наборот.
 
 ```bash
 TASK [Update apt cache] 
@@ -1264,7 +1261,7 @@ ok: [minion3]
 - **Применение параметров**: Параметры, примененные к внешнему блоку (например, when), будут влиять на все задачи внутри него, включая задачи во вложенных блоках. Параметры, примененные к внутреннему блоку, будут влиять только на его задачи. Если параметры конфликтуют, параметры внутреннего блока имеют приоритет.
 - **Обработка ошибок (rescue/always)**: Секции rescue и always всегда относятся к ближайшему родительскому block. Если задача во внутреннем блоке завершается с ошибкой, будет активирована секция rescue этого внутреннего блока (если она есть). Если её нет, ошибка "пропагерирует" к следующему внешнему блоку, пока не будет найдена секция rescue или пока ошибка не достигнет уровня плейбука.
 
-Перепишем плейбук с использованием директивы `block` - `install_nginx_block.yml`, а также вместо использования специфических модулей установки пакетов (apt, dnf), используем модуль `package` который является универсальным и работает с различными системами управления пакетами (например, apt для Debian/Ubuntu, yum/dnf для CentOS/RHEL, pacman для Arch Linux и т.д.). Ansible сам определит, какой менеджер пакетов используется на целевом сервере, и выполнит соответствующую команду.
+Перепишем плейбук с использованием директивы `block`, для этого создадим новый плейбук `install_nginx_block.yml`: 
 
 ```yaml
 - name: Install Nginx with content to a redHat-like system and debian-like system
@@ -1273,46 +1270,54 @@ ok: [minion3]
   
   vars:
     source_file: "../website_content/index.html" 
-    dest_file: "/var/www/html"
+    dest_file_debian: "/var/www/html" # Путь назначения для файла index.html на Debian-подобных системах
     dest_file_redhat: "/usr/share/nginx/html" # Путь назначения для файла index.html на RedHat-подобных системах
 
   tasks:
-    - name: Ensure the Nginx package is installed # Убедиться, что пакет nginx установлен
-      package: # Модуль для управления пакетами
-        name: nginx # Имя пакета для установки
-        state: present # Убедиться, что пакет установлен
-        update_cache: yes # Обновить кэш пакетов перед установкой
+    - block: # Установка Nginx и копирование файла index.html на Debian-подобных системах
+      - name: Update apt cache 
+        apt: 
+          update_cache: yes 
+        
+      - name: Install nginx on Debian-like systems 
+        apt: 
+          name: nginx 
+          state: present
 
-    - block: # Копирование файла index.html и запуск Nginx на Debian-подобных системах
       - name: Copy custom index.html to Nginx web root on Debian-like systems
         copy: 
           src: "{{ source_file }}" 
-          dest: "{{ dest_file }}" 
+          dest: "{{ dest_file_debian }}" 
           mode: '0644' 
-
-      - name: Ensure nginx is running and enabled 
-        service: name=nginx state=started enabled=yes
       when: ansible_os_family == "Debian"
 
-    - block: # Копирование файла index.html и запуск Nginx на RedHat-подобных системах
+    - block:  # Установка Nginx и копирование файла index.html на RedHat-подобных системах
+      - name: Install EPEL repository
+        dnf: 
+          name: epel-release 
+          state: present 
+
+      - name: Install nginx on RedHat-like systems 
+        dnf: 
+          name: nginx
+          state: present
+
       - name: Copy custom index.html to Nginx web root on RedHat-like systems
         copy: 
           src: "{{ source_file }}" 
           dest: "{{ dest_file_redhat }}" 
           mode: '0644' 
+      when: ansible_os_family == "RedHat" 
 
-      - name:  Reload or start nginx in container 
-        shell: |
-          nginx -t && nginx -s reload || nginx
-        ignore_errors: true
-      when: ansible_os_family == "RedHat"
+    - name: Ensure nginx is running and enabled # Стартуем Nginx и добавляем в автозагрузку
+      service: name=nginx state=started enabled=yes
 ```
 
 Код плейбука получился более комактным и выразительным.
 
 ## Шаг 7. Циклы Loop, Until, With_*
 
-Циклы используют, чтобы повторить какое-либо действие несколько раз. В ansible есть несколько способов, как органиовать цикл. 
+Циклы используют, чтобы повторить какое-либо действие несколько раз. В ansible есть несколько способов, как органиовать цикл.
 
 ### Цикл loop (with_items)
 
@@ -1352,9 +1357,12 @@ ok: [minion1] => (item=Mery) => {
     "msg": "Hello Mery"
 }
 ```
+
 Как и ожидалось, директива `debug: msg="Hello {{ item }}"` выполнилась для каждого элемента цикла, заданного с помощью `loop`.
 
-Вот пример уже более полезного и реального кейса, длл установки приложений через цикл loop. Создадим новый плейбук `install_packages.yml`:
+Вот пример уже более полезного и реального кейса, длл установки приложений через цикл loop. В нем такжже вместо использования специфических модулей ансибл для установки пакетов (apt, dnf), используем модуль `package` который является универсальным и работает с различными системами управления пакетами (например, apt для Debian/Ubuntu, yum/dnf для CentOS/RHEL, pacman для Arch Linux и т.д.). Ansible сам определит, какой менеджер пакетов используется на целевом сервере, и выполнит соответствующую команду.
+Создадим новый плейбук `install_packages.yml`:
+
 ```yaml
 ---
 - name: Install packages via loop playbook
@@ -1384,11 +1392,13 @@ ok: [minion1] => (item=Mery) => {
       - nmap
 
 ```
-Запускаем плейбук и при желании можем убедиться, что на всех серверах приложения успешно установились. 
+
+Запускаем плейбук и при желании можем убедиться, что на всех серверах приложения успешно установились.
 
 ### Цикл until
 
 Цикл `until` выполняется до тех пор, пока не выполниться определенное нами условие. Ключевые моменты:
+
 - Выполняется минимум один раз.
 - Если условие не истинно, повторяется до `retries` раз.
 - Между попытками пауза `delay` секунд.
@@ -1416,8 +1426,8 @@ ok: [minion1] => (item=Mery) => {
         msg: "Current value: {{ result.stdout }}"
 ```
 
-Логика работы здесь такая. Добавили в файл букву А и выводим содержжмое файла. Сохраняем результат в переменную `result`. Проверяем, найдено ли в переменной result пять букв А (в первый раз естественно нет, там только одна А). Далее ждем одну секунду (а это отвечает delay: 1), и повторяем снова, и так до 10 раз (за это отвечает retries: 10). 
-Есил бы мы искали не 5 букв А (ААААА), а к примеру 100, то цикл бы выполнился 11 раз (перый, и еще 10 повторений), и задача завершилась бы неудачей. 
+Логика работы здесь такая. Добавили в файл букву А и выводим содержжмое файла. Сохраняем результат в переменную `result`. Проверяем, найдено ли в переменной result пять букв А (в первый раз естественно нет, там только одна А). Далее ждем одну секунду (а это отвечает delay: 1), и повторяем снова, и так до 10 раз (за это отвечает retries: 10).
+Есил бы мы искали не 5 букв А (ААААА), а к примеру 100, то цикл бы выполнился 11 раз (перый, и еще 10 повторений), и задача завершилась бы неудачей.
 
 Запустим плейбук с параметром -v (говорит ансибл делать более подробный вывод хода выполнения), чтобы отобразить все повторы цикла (по умолчанию, чтобы не перегруать информацией вывод, ансибл покает только первые 2) `ansible-playbook playbooks/until.yml -v`
 
@@ -1438,6 +1448,7 @@ ok: [minion1] => {
 Цикл `until` применяется, где нужно ждать, пока что-то изменится или станет доступно, с контролем количества попыток и интервалом.
 
 Например в этой задаче мы ждем 50 секунд (10 попыток по 5 секунд), пока хост не начнет пинговаться:
+
 ```yaml
 - name: Wait until 192.168.1.100 responds to ping
   shell: ping -c 1 -W 1 192.168.1.100 # Отправляет один ping (таймаут 1 секунда)
@@ -1457,14 +1468,13 @@ FAILED - RETRYING: Wait until 192.168.1.100 responds to ping (8 retries left).
 ok: [localhost]
 ```
 
-
 ### Цикл With_fileglob и glob
 
-Ранее мы написали плейбук `install_nginx_block.yml`, который устанавилвает вебсервер nginx, и заменяет страницу по умолчаниюю на наш вариант. Для дальнейшего изучения, я добавил папку `website_content2` куда положил два  файла изображений (`image1.jpeg` и `image2.png`) и отредактировнный `index.html` из первой папки, добавив в него отображжение этих изображений. Эти файлы мы и будем копировать, используя циклы. За основу мы возьмем плейбук `install_nginx_block.yml` изменив его для копирование файлов в цикле. 
+Для дальнейшего изучения, я добавил папку `website_content2` куда положил два  файла изображений (`image1.jpeg` и `image2.png`) и отредактировнный `index.html` из первой папки, добавив в него отображжение этих изображений. Эти файлы мы и будем копировать, используя цикл. 
 Создадим новый плейбук `install_nginx_loop.yml` со следующим содержанием:
 
 ```yaml
-- name: Install Nginx with content to a redHat-like system and debian-like system
+- name: Install Nginx with content and loop on RedHat-like and Debian-like systems 
   hosts: all
   become: true
   
@@ -1484,55 +1494,48 @@ ok: [localhost]
         state: present
         update_cache: yes 
 
-    - block: # Замена дефолтной страницы и запуск Nginx на Debian-подобных системах
-      - name: 
-        copy: 
-          src: "{{ source_folder }}/{{ item }}"  #  откуда брать файл
-          dest: "{{ dest_folder_debian }}"   #  каталог куда копировать файл
-          mode: '0644' 
-        loop: "{{ web_files }}"  # задаем какие элементы копировать в цикле
-
-      - name: Ensure nginx is running and enabled 
-        service: name=nginx state=started enabled=yes
+    - name: Copy custom index.html to Nginx web root on Debian-like systems
+      copy: 
+        src: "{{ source_folder }}/{{ item }}"  #  откуда брать файл
+        dest: "{{ dest_folder_debian }}"   #  каталог куда копировать файл
+        mode: '0644' 
+      loop: "{{ web_files }}"  # задаем какие элементы копировать в цикле
       when: ansible_os_family == "Debian"
 
-    - block: # Замена дефолтной страницы и запуск Nginx на RedHat-подобных системах
-      - name: Copy custom index.html to Nginx web root on RedHat-like systems
-        copy: 
-          src: "{{ source_folder }}/{{ item }}"  #  откуда брать файл
-          dest: "{{ dest_folder_redhat }}"   #  каталог куда копировать файл
-          mode: '0644' 
-        loop: "{{ web_files }}" # задаем какие элементы копировать в цикле
-
-      - name:  Reload or start nginx in container 
-        shell: |
-          nginx -t && nginx -s reload || nginx
-        ignore_errors: true
+    - name: Copy custom index.html to Nginx web root on RedHat-like systems
+      copy: 
+        src: "{{ source_folder }}/{{ item }}"  #  откуда брать файл
+        dest: "{{ dest_folder_redhat }}"   #  каталог куда копировать файл
+        mode: '0644' 
+      loop: "{{ web_files }}" # задаем какие элементы копировать в цикле
       when: ansible_os_family == "RedHat"
+
+    - name: Ensure nginx is running and enabled 
+      service: name=nginx state=started enabled=yes
 ```
 
-Можем запустить плейбук и убедиться что дефолтная страница заменилась на нашу, с картинками, перейдя по адресу http://localhost:8081 для minion1, http://localhost:8082 для minion2, и http://localhost:8083/ для minion3
+Можем запустить плейбук и убедиться что дефолтная страница заменилась на нашу, с картинками, перейдя по адресу <http://localhost:8081> для minion1, <http://localhost:8082> для minion2, и <http://localhost:8083> для minion3
 
 В этом плейбуке мы использовали цикл, для копирования нескольких файлов в цикле, явно укаывая их имена. Но если файлов много, это будет крайне неудобно, прописывать каждый файл. Для решения этой проблемы можно использовать цикл `with_fileglob`.
 
- **with_fileglob** - это цикл в Ansible, который перебирает файлы по специальному шаблону (глобу) на локальной машине управления. 
- 
-Перепишем наш плейбук с учетом использования `with_fileglob`, строки где мы использовали цикл loop я закоментировал:
+ **with_fileglob** - это цикл в Ansible, который перебирает файлы по специальному шаблону (глобу) на локальной машине управления.
+
+Перепишем наш плейбук с учетом использования `with_fileglob`, строки где раньше мы использовали цикл loop я закоментировал:
 
 ```yaml
-- name: Install Nginx with content and loop on RedHat-like and Debian-like systems 
+- name: Install Nginx with content and with_fileglob on RedHat-like and Debian-like systems
   hosts: all
   become: true
-  
+
   vars:
     source_folder: "../website_content2"  # устанавливаем директорию, откуда будем копировать
     dest_folder_debian: "/var/www/html" # Путь назначения для дефолтной страницы на Debian-подобных системах
     dest_folder_redhat: "/usr/share/nginx/html" # Путь назначения для дефолтной страницы на RedHat-подобных системах
-    # web_files: # Определяем элементы цикла в виде переменной web_files для цикла loop
-    #   - index.html
-    #   - image1.jpeg
-    #   - image2.png
-
+    # web_files: # Определяем элементы цикла в виде переменной web_files loop-версия
+    #  - index.html
+    #  - image1.jpeg
+    #  - image2.png
+      
   tasks:
     - name: Ensure the Nginx package is installed 
       package: 
@@ -1540,56 +1543,52 @@ ok: [localhost]
         state: present
         update_cache: yes 
 
-    - block: 
-      - name: 
-        copy: 
-          # src: "{{ source_folder }}/{{ item }}"  # откуда будем копировать файл
-          src: "{{ item }}" # откуда будем копировать файл
-          dest: "{{ dest_folder_debian }}"  
-          mode: '0644' 
-        # loop: "{{ web_files }}"
-        with_fileglob: "{{ source_folder }}/*.*"   # вовращаем в цикле по одному все файлы в каталоге
-
-      - name: Ensure nginx is running and enabled 
-        service: name=nginx state=started enabled=yes
+    - name: Copy custom index.html to Nginx web root on Debian-like systems
+      copy: 
+        # src: "{{ source_folder }}/{{ item }}"  #  откуда брать файл loop-версия
+        src: "{{ item }}" # откуда будем копировать файл
+        dest: "{{ dest_folder_debian }}"   #  каталог куда копировать файл
+        mode: '0644' 
+      # loop: "{{ web_files }}" loop-версия
+      with_fileglob: "{{ source_folder }}/*.*"   # вовращаем в цикле по одному все файлы в каталоге 
       when: ansible_os_family == "Debian"
 
-    - block: 
-      - name: Copy custom index.html to Nginx web root on RedHat-like systems
-        copy: 
-          # src: "{{ source_folder }}/{{ item }}"   # откуда будем копировать файл
-          src: "{{ item }}"  # откуда будем копировать файл
-          dest: "{{ dest_folder_redhat }}"  
-          mode: '0644' 
-        # loop: "{{ web_files }}" 
-        with_fileglob: "{{ source_folder }}/*.*"  # вовращаем в цикле по одному все файлы в каталоге
-
-      - name:  Reload or start nginx in container 
-        shell: |
-          nginx -t && nginx -s reload || nginx
-        ignore_errors: true
+    - name: Copy custom index.html to Nginx web root on RedHat-like systems
+      copy: 
+        # src: "{{ source_folder }}/{{ item }}"   # откуда будем копировать файл loop-версия
+        src: "{{ item }}"  # откуда будем копировать файл
+        dest: "{{ dest_folder_redhat }}"   #  каталог куда копировать файл
+        mode: '0644' 
+      # loop: "{{ web_files }}" loop-версия
+      with_fileglob: "{{ source_folder }}/*.*"  # вовращаем в цикле по одному все файлы в каталоге
       when: ansible_os_family == "RedHat"
+
+    - name: Ensure nginx is running and enabled 
+      service: name=nginx state=started enabled=yes
 ```
-Так же я поправили параметр `src: "{{ item }}`, так как with_fileglob возвращает полный путь к файлу. 
+
+Здесь надо обратить внимание, что `src: "{{ source_folder }}/{{ item }}"` мы заменили на `src: "{{ item }}`, так как with_fileglob возвращает полный путь к файлу.
 
 #### Glob
+
 Глоб (glob) - это шаблон для поиска файлов по маске с использованием специальных символов.
 
 Можно использовать разлиные шаблоны глоб, и возвращать файлы по маске, допустим только те, чьи имена начинаются со слова `image` (маска `image*`).
 
 Поддерживаются такие маски:
-Маска	| Значение
+
+Маска | Значение
 --- | ---
-`*`	| Любая последовательность символов (в том числе пустая)
-`?`	| Один любой символ
-`[abc]`	| Один символ из перечисленных (например, `a`, `b` или `c`)
-`[a-z]`	| Один символ из диапазона
-`**` 	| Рекурсивный поиск в подкаталогах
+`*` | Любая последовательность символов (в том числе пустая)
+`?` | Один любой символ
+`[abc]` | Один символ из перечисленных (например, `a`, `b` или `c`)
+`[a-z]` | Один символ из диапазона
+`**` | Рекурсивный поиск в подкаталогах
 
 Примеры:
 
 Шаблон | Что найдёт
- --- | --- 
+ --- | ---
 `*.txt` | Все `.txt` файлы в каталоге
 `file?.log` | `file1.log`, `fileA.log`, но не `file12.log`
 `config[12].yml`| `config1.yml`, `config2.yml`
@@ -1599,53 +1598,53 @@ ok: [localhost]
 
 В ансибл есть несколько директив вида `with_*`, с помощь которых можно организовать цикл для различных целей. Мы уже рассмотрели ранее `with_items` и `with_fileglob`, но их гораздо больше.
 
-#### Основные with_* конструкции:
+#### Основные with_* конструкции
 
 Директива | Что делает | Пример применения
 --- | --- | ---
-with_items | Перебор произвольного списка | Пройти по списку имён или чисел
-with_fileglob | Перебор файлов по маске (глоб) на **контроллере** | Найти все `.conf` файлы в папке
-with_file | Перебор файлов, но не имен, а содержимое каждого файла читается и передаётся как переменная | Чтение содержимого файлов в цикле
-with_sequence | Генерация числовой последовательности | Создать список чисел от 1 до 10
-with_dict | Перебор словаря | Пройти по ключам и значениям словаря `item.key + item.value`
-with_together | Одновременный перебор **двух списков** по индексам | Сопоставить имена и IP-адреса по индексам `name[i] + ip[i]`
-with_nested | Перебор всех комбинаций из нескольких списков | Декартово произведение. Если в одном списке цвета [красный, синий], а в другом размеры [S,M], переберет все их возможные комбинации - красный S, красный M, синий S, синий M и т.д.  
-with_subelements | Для вложенных структур (списки в объектах) | Перебрать пользователей и их адреса
-with_lines | Перебор строк из вывода команды или файла | Перебрать строки вывода `ls`
-with_random_choice | Выбор одного случайного элемента из списка | Выбрать случайное имя из списка
+`with_items` | Перебор произвольного списка | Пройти по списку имён или чисел
+`with_fileglob` | Перебор файлов по маске (глоб) на **контроллере** | Найти все `.conf` файлы в папке
+`with_file` | Перебор файлов, но не имен, а содержимое каждого файла читается и передаётся как переменная | Чтение содержимого файлов в цикле
+`with_sequence` | Генерация числовой последовательности | Создать список чисел от 1 до 10
+`with_dict` | Перебор словаря | Пройти по ключам и значениям словаря `item.key + item.value`
+`with_together` | Одновременный перебор **двух списков** по индексам | Сопоставить имена и IP-адреса по индексам `name[i] + ip[i]`
+`with_nested` | Перебор всех комбинаций из нескольких списков | Декартово произведение. Если в одном списке цвета [красный, синий], а в другом размеры [S,M], переберет все их возможные комбинации - красный S, красный M, синий S, синий M и т.д.  
+`with_subelements` | Для вложенных структур (списки в объектах) | Перебрать пользователей и их адреса
+`with_lines` | Перебор строк из вывода команды или файла | Перебрать строки вывода `ls`
+`with_random_choice` | Выбор одного случайного элемента из списка | Выбрать случайное имя из списка
 
-Не будем в рамках вводного курса подробно останавливаться на примерах использования каждой конструкции, их можно посмотреть в документации. 
+Не будем в рамках вводного курса подробно останавливаться на примерах использования каждой конструкции, их можно посмотреть в документации.
 
-> Важно знать, что `with_*` - начиная с Ansible 2.5 это устаревший стиль, и разработчики ансибл рекомендуют использовать `loop` + `lookup()` вместо `with_*`. Но `with_*` всё ещё широко используется.
+> Важно знать, что `with_*` - начиная с Ansible 2.5 это устаревший стиль, и разработчики ансибл рекомендуют использовать `loop` + `lookup()` вместо `with_*`. Но `with_*` всё ещё широко используется и важно знать этот синтаксис. 
 
 #### lookup
+
 `lookup` - это специальная функция Ansible, которая позволяет получить данные из внешних источников до выполнения задачи (таска). `lookup` работает только на контроллере ансибл (т.е локально, а не на целевых хостах).
 
 `lookup` использует **плагины**, которые определяют внешний источник данных. Например с помощью плагина `pipe` можно выполнить команду на контроллере: `lookup('pipe', 'date +%Y')` - выведет текущий год с контроллера.
 
-Источник данных | Пример lookup 
---- | --- 
-файл | `lookup('file', 'path/to/file.txt')` 
+Источник данных | Пример lookup
+--- | ---
+файл | `lookup('file', 'path/to/file.txt')`
 список файлов | `lookup('fileglob', '*.conf', wantlist=True)`
 выполнение команды | `lookup('pipe', 'whoami')`
-переменная по имени | `lookup('vars', 'var_name')` 
+переменная по имени | `lookup('vars', 'var_name')`
 случайный элемент | `lookup('random_choice', ['a', 'b', 'c'])`
-
 
 #### Эквиваленты with_* -> loop + lookup
 
 with_* | Эквивалент loop
 --- | ---
-with_items: [...] | loop: [...]
-with_fileglob: '*.conf' | loop: "{{ lookup('fileglob', '*.conf', wantlist=True) }}"
-with_file: [...] | loop: "{{ lookup('file', [...], wantlist=True) }}"
-with_sequence: start=1 end=5 | loop: "{{ range(1, 6) }}"
-with_dict: {a: 1, b: 2} | loop: "{{ dict2items(my_dict) }}"
-with_together: [list1, list2] | loop: "{{ zip(list1, list2) }}"
-with_nested: [[1, 2], ['a', 'b']] | loop: "{{ product([ [1, 2], ['a', 'b'] ]) }}"
-with_subelements | loop: "{{ lookup('subelements', ...) }}"
-with_lines: some command | loop: "{{ lookup('pipe', 'some command') | splitlines }}"
-with_random_choice: [...] | loop: "{{ [ lookup('random_choice', [...]) ] }}"
+`with_items: [...]` | `loop: [...]`
+`with_fileglob: '*.conf'` | `loop: "{{ lookup('fileglob', '*.conf', wantlist=True) }}"`
+`with_file: [...]` | `loop: "{{ lookup('file', [...], wantlist=True) }}"`
+`with_sequence: start=1 end=5` | `loop: "{{ range(1, 6) }}"`
+`with_dict: {a: 1, b: 2}` | `loop: "{{ dict2items(my_dict) }}"`
+`with_together: [list1, list2]` | `loop: "{{ zip(list1, list2) }}"`
+`with_nested: [[1, 2], ['a', 'b']]` | `loop: "{{ product([ [1, 2], ['a', 'b'] ]) }}"`
+`with_subelements` | `loop: "{{ lookup('subelements', ...) }}"`
+`with_lines: some command` | `loop: "{{ lookup('pipe', 'some command') \| splitlines }}"`
+`with_random_choice: [...]` | `loop: "{{ [ lookup('random_choice', [...]) ] }}"`
 
 ## Шаг 8. Шаблонизатор Jinja2 и модуль template
 
@@ -1669,7 +1668,26 @@ Jinja2 - это шаблонизатор, используемый в Ansible д
 
 Работает внутри `{{ ... }}` или `{% ... %}` - шаблонов.
 
-Вот список популярных Jinja2-фильтров с краткими примерами:
+#### Операторы Jinja2
+
+Список наиболее часто используемых операторов
+
+Тип | Оператор | Пример | Значение
+--- | --- | --- | ---
+Арифметика | `+` `-` `*` `/` `//` `%` | `5 + 2`, `10 // 3` | Сложение, деление и т.д.
+Сравнение | `==` `!=` `<` `>` `<=` `>=` | `x == 10`, `a != b` | Сравнение значений
+Логика | `and` `or` `not` | `a and b`, `not x` | Булева логика
+Проверка типа | `is` `is not` | `x is none`, `y is string` | Сравнение по типу/значению
+Вхождение | `in` `not in` | `'a' in list`, `'b' not in str` | Проверка наличия
+Фильтры | `\|` | `value \| default('N/A')` | Преобразование через фильтр
+Тернарный | `condition \| ternary(a, b)` | `x > 5 \| ternary('yes', 'no')` | Условное значение
+Оператор `if` | внутри шаблонов | `{% if x %} ok {% endif %}` | Условная логика
+Оператор `~` | конкатенация строк | `'user-' ~ id` | Склеивание строк
+Доступ к полям | `.` и `[]` | `item.name`, `item['name']` | Доступ к значению по ключу
+
+#### Фильтры Jinja2
+
+Список популярных Jinja2-фильтров с краткими примерами:
 
 Фильтр | Описание и пример
 --- | ---
@@ -1695,6 +1713,7 @@ Jinja2 - это шаблонизатор, используемый в Ansible д
 Модуль `template` в Ansible используется для генерации файлов на основе Jinja2-шаблонов (как правило файлов с расширением `*.j2`). Он берет шаблонный файл, подставляет переменные и сохраняет результат в указанном пути на целевой машине.
 
 **Ключевые моменты**:
+
 - Источник: `src` - путь к шаблону.
 - Назначение: `dest` - куда сохранить сгенерированный файл.
 - Автоматическая подстановка переменных из окружения или playbook.
@@ -1702,6 +1721,7 @@ Jinja2 - это шаблонизатор, используемый в Ansible д
 - Используется для конфигов, скриптов и любых текстовых файлов с динамическим содержим
 
 Простой пример использования:
+
 ```yaml
 - name: Render config file
   template:
@@ -1710,64 +1730,310 @@ Jinja2 - это шаблонизатор, используемый в Ansible д
     mode: '0644'
 ```
 
-Для демонстрации. я создал каталог website_content3, куда поместил шаблон j2 - это по сути файл index.html из каталога website_content, в который я добавил следующие строки с переменными:
+Для демонстрации скопируем все файлы из каталога `website_content2` в каталог `website_content3`, переименуем `index.html` в `index.j2` и добавим после строчки `<h1>Hello World</h1>` следующие строки с переменными:
 
-```j2
+```html
 ...
   <h1>Hello World</h1>
   <p>Server owner: {{ owner }}</p>
   <p>Server hostname: {{ ansible_hostname }}</p>
   <p>Server OS famely: {{ ansible_os_family }}</p>
   <p>Server uptime: {{ (ansible_uptime_seconds // 3600) }} h {{ (ansible_uptime_seconds % 3600) // 60 }} min</p>
-</body>
 ...
 ```
-Во время генерации дефолтной страницы модуль `template` автоматически подставить значения переменных в шаблон. 
 
-На основе плейбука `install_nginx_block.yml` создадим новый - `install_nginx_template.yml`. В нём мы укажем путь к шаблону, путь и имя выходного файла и заменим команду `copy` на `template`. Вместо простого копирования файл будет сгенерирован заново: в шаблоне будут автоматически подставлены указанные нами переменные.
+Во время генерации дефолтной страницы модуль `template` автоматически подставить значения переменных в шаблон.
+
+Создадим новый плейбук - `install_nginx_template.yml`. В нём мы укажем путь к шаблону, добавим модуль `template`, который вместо простого копирования файла создаст его заново по шаблону, заменив переменные на конкретные значения.
+
 ```yaml
-- name: Install Nginx with content on RedHat-like and Debian-like systems 
+- name: Install Nginx with content uses template on RedHat-like and Debian-like systems
   hosts: all
   become: true
-  
+
   vars:
-    source_file: "../website_content3/index.j2" # Путь к шаблону 
-    dest_file: "/var/www/html"
-    dest_file_redhat: "/usr/share/nginx/html" 
+    source_dir: "../website_content3" # каталог с шаблоном и файлами изображений
+    dest_file_debian: "/var/www/html"
+    dest_file_redhat: "/usr/share/nginx/html"
 
   tasks:
-    - name: Ensure the Nginx package is installed 
-      package: name=nginx state=present update_cache=yes 
+    - name: Ensure nginx is installed and index + files are in place
+      block:
+        - name: Install nginx # устанавливаем nginx
+          package:
+            name: nginx
+            state: present
+            update_cache: yes
 
-    - block:
-      - name: Generate index.html to Nginx web root on Debian-like systems
-        template: # генерируем файл по шаблону, перменные автоматически подставятся
-          src: "{{ source_file }}" 
-          dest: "{{ dest_file }}/index.html" # Путь к сгенерированному файлу
-          mode: '0644' 
+        - name: Set nginx web root path 
+          set_fact:  
+            nginx_web_root: "{{ (ansible_os_family == 'Debian') | ternary(dest_file_debian, dest_file_redhat) }}" 
+            # записываем в переменную nginx_web_root путь к каталогу с дефолтной страницей в зависимости от используемого дистрибутива
+            # если Debian значит берем занчения из dest_file_debian, иначе из dest_file_redhat
 
-      - name: Ensure nginx is running and enabled 
-        service: name=nginx state=started enabled=yes
-      when: ansible_os_family == "Debian"
+        - name: Generate index.html
+          template:
+            src: "{{ source_file }}/index.j2" # откуда берем шаблон, в нашем случае "../website_content3/index.j2"
+            dest: "{{ nginx_web_root }}/index.html" # куда и с каким имененм сгенерировать файл по шаблону
+            mode: '0644'
 
-    - block: 
-      - name:  Generate index.html to Nginx web root on RedHat-like systems
-        template:  # генерируем файл по шаблону, перменные автоматически подставятся
-          src: "{{ source_file }}" 
-          dest: "{{ dest_file_redhat }}/index.html" # Путь к сгенерированному файлу
-          mode: '0644' 
+        - name: Copy image files to nginx web root # копируем файлы изображений
+          copy: 
+            src: "{{ item }}"
+            dest: "{{ nginx_web_root }}/"
+            mode: '0644'
+          loop: "{{ lookup('fileglob', '{{ source_file }}/image*.*', wantlist=True) }}"
 
-      - name:  Reload or start nginx in container 
-        shell: |
-          nginx -t && nginx -s reload || nginx
-        ignore_errors: true
-      when: ansible_os_family == "RedHat"
+        - name: Ensure nginx is running and enabled 
+          service: name=nginx state=started enabled=yes
+
+      when: ansible_os_family in ['Debian', 'RedHat']
+
 ```
+
 Запустим плейбук `ansible-playbook playbooks/install_nginx_template.yml` и можем убедиться, что все сработало, сгенерированная новая html страница с данными сервера:
-```
+
+```txt
 Hello World
 Server owner: Alex form host_vars
 Server hostname: c342ef95bc19
 Server OS famely: Debian
 Server uptime: 12 h 20 min
 ```
+
+## Шаг 9. Роли и Ansible Galaxy
+
+Основной сценарий использования ансибл - написание плейбука, который решает какую-то конкретную бизнес-задачу. Развертывание кластера, обнаовление серверов, их донастройка и т.д. Но при большом объеме задачи, код в плейбуке может сильно разрастаться, а сами плейбуки становятся сложными для понимания и перегруженными кодом. К тому же, одни и те же части кода могут использоваться в разных плейбуках.
+Для решения этой проблемы в ансибл предусмотрены Роли, которые дают возмоность структурировать код ансибл в отдельный, изолированный и переиспользуемый модуль.
+
+### Ansible Galaxy
+
+В ансибл предусмотрен централизованный репозиторий ролей и коллекций - Galaxy, с его помощью можно искать, устанавливать и публиковать роли/коллекции. Galaxy предназначен для повторного использования чужих ролей/коллекций, и создания собственных, совместимых с Galaxy.
+
+Основные комманды
+
+```sh
+ansible-galaxy init <роль>         # Создание шаблона роли
+ansible-galaxy install <имя>       # Установка роли
+ansible-galaxy collection install <имя>  # Установка коллекции
+ansible-galaxy list                # Список установленных ролей
+ansible-galaxy role remove <имя>  # Удаление роли
+```
+
+Роль в Ansible должна быть простой, понятной, универсальной и переиспользуемой: чёткая структура, всё через переменные, без жёстких привязок к окружению, с возможностью повторного запуска без сбоев и с краткой документацией для понимания, что она делает и как её использовать.
+
+### Создание новой роли
+
+Теперь перейдем к практике, сначала создадим каталог для ролей и перейдем в него `mkdir -p roles && cd roles`.
+В учебных целях создадим роль, на основании предыдущего примера, которая будет разворачивать nginx и заменять дефолтную веб-страницу.
+
+Выполним команду `ansible-galaxy init deploy_nginix_with_content`, которая создаст нам пустой скелет роли с именем `deploy_nginix_with_content`:
+
+```sh
+roles # Каталог с ролями
+└── deploy_nginix_with_content  # Каталог с ролю 
+    ├── defaults
+    │   └── main.yml  # Переменные по умолчанию
+    ├── files         # Статичные файлы для копирования на хосты
+    ├── handlers      
+    │   └── main.yml  # Хендлеры
+    ├── meta
+    │   └── main.yml  # Метаданные роли, зависимости, поддержка платформ
+    ├── README.md     # Описание роли, инструкции по использованию
+    ├── tasks
+    │   └── main.yml  # Основные таски роли
+    ├── templates     # Шаблоны файлов с переменными (Jinja2)
+    ├── tests         # Тестовые плейбуки и инвентори для проверки роли
+    │   ├── inventory
+    │   └── test.yml
+    └── vars
+        └── main.yml  # Переменные с высоким приоритетом (не переопределятся из плейбука)
+```
+
+Генератор нам создал полную структуру galaxy совместимой роли (в ансибл, чтобы роль считалась валидной необходимый миниум, это наличие - `tasks/main.yml`).
+
+В первую очередь добавим в файл конфигурации `ansible.cfg` путь к нашему каталогу с ролями:
+
+```ini
+[defaults]
+host_key_checking   = false
+inventory           = ./hosts
+roles_path          = ./roles # добавим путь к каталогу с ролями
+```
+
+Мы это делаем чтобы ансибл находил каталог с этой ролью, поскольку мы запускаем плейбук из подкаталога `playbooks`, то по умолчанию каталог с ролями ансибл будет искать в подкаталоге `playbooks/roles`. Мы же в нашем случае роли храним в корневом подкаталоге `roles`, что мы и указзали в файле конфигурации ансибл.
+
+В первую очередь скопируем файлы изображений из каталога `website_content2` в каталог `roles/deploy_nginix_with_content/files/`. Затем скопируем файл шаблона дефолтной страницы `index.j2` из каталога `website_content3` в каталог `roles/deploy_nginix_with_content/templates/` и отредактируем его, добавив отображение изображений:
+
+```html
+...
+  <h1>Hello World</h1>
+
+  <p>Server owner: {{ owner }}</p>
+  <p>Server hostname: {{ ansible_hostname }}</p>
+  <p>Server OS famely: {{ ansible_os_family }}</p>
+  <p>Server uptime: {{ (ansible_uptime_seconds // 3600) }} h {{ (ansible_uptime_seconds % 3600) // 60 }} min</p>
+
+  <img width="300" src="image1.jpeg" alt="Example Image">
+  <br />
+  <img width="300"  src="image2.png" alt="Example Image 2">
+...
+```
+
+Далее в `roles/deploy_nginix_with_content/vars/main.yml` добавим две переменные с путем к каталогу с дефолтной страницей nginx для раззных ОС:
+
+```yaml
+dest_file_debian: "/var/www/html"
+dest_file_redhat: "/usr/share/nginx/html"
+```
+
+Мы разместиили эти переменные в папке `vars`, так как значение этих переменных устанавливают создатели докер-образов, и они по сути неизменны (т.е. являются константами), и пользователю нет нужды их именять. Если бы мы определяли переменные которые пользователю можно было бы менять, нам следовало бы их определить в `defaults/main.yml`.
+
+Теперь же в `task/main.yml` определим те задачи, что будет непосредственно выполнять роль:
+
+```yaml
+
+- name: Ensure nginx is installed and index + files are in place
+  block:
+    - name: Install nginx
+      package:
+        name: nginx
+        state: present
+        update_cache: yes
+
+    - name: Set nginx web root path
+      set_fact:
+        nginx_web_root: "{{ (ansible_os_family == 'Debian') | ternary(dest_file_debian, dest_file_redhat) }}"
+
+    - name: Generate index.html
+      template:
+        src: index.j2
+        dest: "{{ nginx_web_root }}/index.html"
+        mode: '0644'
+
+    - name: Copy files to nginx web root
+      copy:
+        src: "{{ item }}"
+        dest: "{{ nginx_web_root }}/"
+        mode: '0644'
+      loop: "{{ lookup('fileglob', 'image*.*', wantlist=True) }}"
+
+    - name: Ensure nginx is running and enabled 
+      service: name=nginx state=started enabled=yes
+
+  when: ansible_os_family in ['Debian', 'RedHat']
+```
+
+Необходимо обратить внимание, что в данной версии с использованием ролей, нам нет нужны указывать каталоги где хранится шаблон или файлы изображжений, здесь мы просто указываем наименование файла с шаблоном `src: index.j2` и ансибл автоматически будет искать его в каталоге `templates` роли. Это же относится и к файлам изображений, в конструкции `loop: "{{ lookup('fileglob', 'image*.*', wantlist=True) }}"`  поиск файлов, с именами начинающимися с `image` будет осуществляться в каталоге `files` нашей роли. 
+Роль создана, теперь можно ее использовать. 
+
+Последним шагом, добавим новый плейбук `install_nginx_role.yml`, в котором мы будем вызывать роль, ограничив ее использование системами на базе Linux:
+
+```yaml
+---
+- name: Install Nginx using a Role on RedHat- and Debian-based Systems
+  hosts: all
+  become: true
+
+  roles:
+    - { role: deploy_nginix_with_content, when ansible_system == 'Linux' }
+
+```
+
+Запускаем плейбук, и убеждаемся что все прекрасно работает.
+
+### Установка и использование роли с GitHub
+
+Теперь установим и используем роль с GitHub. Будем использовать роль `robertdebock.users`, доступную с форка на github по адресу <https://github.com/pprometey/ansible-role-users>. С ее помощью мы создадим нового пользователя на каждой управляемой машине (докер-контейнере в нашем случае). 
+
+Установим роль выполнив в корне проекта на управляющей машние:
+
+```sh
+ansible-galaxy install git+https://github.com/pprometey/ansible-role-users,master --roles-path ./roles
+```
+
+- `--roles-path ./roles` — роль будут установлена в каталог `./roles/`.
+имя роли будет соответствовать наименованию git-репозитория. После выполнения будет создана новая роль:
+
+```sh
+.
+└── roles/
+    └── ansible-role-users/
+```
+
+
+Создадим новый плейбук `playbooks/role_add_user.yml`, который быдет использовать эту роль, и создавать нового пользователя:
+
+```yaml
+- name: Adding a user via a role
+  hosts: all
+  become: true
+
+  vars:
+    sudo_group: "{{ 'wheel' if ansible_os_family == 'RedHat' else 'sudo' }}"
+    # в RedHat системах пользователь с правами sudo должен входить в группу "wheel", 
+    # а для Debian систем в группу "sudo"
+    users:
+      - name: testuser
+        groups: 
+        - "{{ sudo_group }}"
+        shell: /bin/bash
+        create_home: true
+        authorized_keys:
+          - "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+        state: present
+
+  roles:
+    - ansible-role-users
+
+```
+Более подробно об использовании роли `robertdebock.users` можно прочитать в `roles/ansible-role-users/README.md`
+
+После выполнения плейбука, можем проверить успешность выполения, подключившись к управляемой машине по ssh под новым пользователем
+```sh
+(.venv) developer@1985aaebee00:~/ansible-learning-template$ ssh testuser@minion1
+...
+testuser@66733d05fda0:~$ exit
+logout
+Connection to minion1 closed.
+```
+Видим что подключение по ssh успешно подключено, и мы работаем под новым пользователем на управляемой машине.
+
+### Установка роли с Ansible Galaxy
+
+Эту же роль можно установить и с [централизованного репозитория ролей Ansible Galaxy](https://galaxy.ansible.com/ui/standalone/roles/), выполнив команду установки роли:
+
+```sh
+ansible-galaxy role install robertdebock.users --roles-path ./roles
+```
+
+Использование роли ничем не отличается от варианта установки с GitHub, за исключением что в данном случае мы испольуем имя роли, прописанное в `meta/mail.yml` роли.
+
+### Использование requirements.yml
+
+`requirements.yml` в ансибл — это файл, где перечислены внешние роли или коллекции, которые нужно установить перед выполнением плейбука и от которых он зависит. Это особенно удобно если используется несколько ролей, и чтобы не устанавливать их по отдельности, достаточно их перечислить в этом файле, и установить одной командой. 
+
+В нашем случае будем устанавливать ту же роль `robertdebock.users`, но уже через файл `requirements.yml`, для этого создадим его в корне проекта, и укажем роль, которую собираемя установить:
+```yaml
+roles:
+  - name: robertdebock.users_requirements
+    src: robertdebock.users
+    version: 6.1.5
+```
+При исползовании файла `requirements.yml` в поле `name:` мы можем указать произвольное имя для роли, в нашем случае мы ее назвали `robertdebock.users_requirements`, в `src` мы указываем уникальное имя роли в galaxy.
+
+Установка c помощью `requirements.yml`
+```sh
+ansible-galaxy role install -r requirements.yml --roles-path ./roles
+```
+
+Так же, мы можем устанавливать роли и с git-репозитория, используя файл `requirements.yml`:
+
+```yaml
+roles:
+  - name: robertdebock.users_requirements_git # как будет называться локальная папка с ролью (обязательно, если src — это URL).
+    src: https://github.com/pprometey/ansible-role-users.git # ссылка на репозиторий
+    scm: git # указывает, что источник — Git-репо
+    version: master # ветка, тег или коммит
+```
+

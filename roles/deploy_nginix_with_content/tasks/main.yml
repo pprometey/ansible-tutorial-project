@@ -1,0 +1,33 @@
+#SPDX-License-Identifier: MIT-0
+---
+# tasks file for deploy_nginix_with_content
+
+- name: Ensure nginx is installed and index + files are in place
+  block:
+    - name: Install nginx
+      package:
+        name: nginx
+        state: present
+        update_cache: yes
+
+    - name: Set nginx web root path
+      set_fact:
+        nginx_web_root: "{{ (ansible_os_family == 'Debian') | ternary(dest_file_debian, dest_file_redhat) }}"
+
+    - name: Generate index.html
+      template:
+        src: index.j2
+        dest: "{{ nginx_web_root }}/index.html"
+        mode: '0644'
+
+    - name: Copy files to nginx web root
+      copy:
+        src: "{{ item }}"
+        dest: "{{ nginx_web_root }}/"
+        mode: '0644'
+      loop: "{{ lookup('fileglob', '*.*', wantlist=True) }}"
+
+    - name: Ensure nginx is running and enabled 
+      service: name=nginx state=started enabled=yes
+
+  when: ansible_os_family in ['Debian', 'RedHat']

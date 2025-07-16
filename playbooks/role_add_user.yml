@@ -1,0 +1,19 @@
+- name: Adding a user via a role
+  hosts: all
+  become: true
+
+  vars:
+    sudo_group: "{{ 'wheel' if ansible_os_family == 'RedHat' else 'sudo' }}"
+    users:
+      - name: testuser
+        groups: 
+        - "{{ sudo_group }}"
+        shell: /bin/bash
+        create_home: true
+        authorized_keys:
+          - "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
+        state: present
+
+  roles:
+    - ansible-role-users
+

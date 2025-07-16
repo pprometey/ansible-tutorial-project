@@ -1,32 +1,43 @@
 FROM pprometey/rockylinux-9-basee:latest
 
+ENV container docker
+
 USER root
 
-RUN dnf -y install openssh-server && \
+RUN dnf -y install systemd openssh-server && \
     dnf clean all && \
-    mkdir -p /var/run/sshd
-
-RUN sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config && \
-    sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config && \
-    sed -i 's/^#\?PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config && \
     ssh-keygen -A
 
-RUN printf '#!/bin/bash\n\
-set -e\n\
-\n\
-if [ -f /mnt/keys/id_rsa.pub ]; then\n\
-    echo "Setting up SSH keys..."\n\
-    cp /mnt/keys/id_rsa.pub /home/developer/.ssh/authorized_keys\n\
-    chmod 600 /home/developer/.ssh/authorized_keys\n\
-    chown developer:developer /home/developer/.ssh/authorized_keys\n\
-    echo "SSH keys configured successfully"\n\
-else\n\
-    echo "Warning: SSH public key not found at /mnt/keys/id_rsa.pub"\n\
-fi\n\
-\n\
-echo "Starting SSH server..."\n\
-exec /usr/sbin/sshd -D\n' > /usr/local/bin/entrypoint.sh && \
-    chmod +x /usr/local/bin/entrypoint.sh
+# Настройка SSH
+RUN mkdir -p /var/run/sshd && \
+    sed -i 's/^#\?PermitRootLogin.*/PermitRootLogin no/' /etc/ssh/sshd_config && \
+    sed -i 's/^#\?PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config && \
+    sed -i 's/^#\?PubkeyAuthentication.*/PubkeyAuthentication yes/' /etc/ssh/sshd_config
 
-EXPOSE 22
-ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+# Сервис для установки ключа перед запуском sshd
+RUN printf '#!/bin/bash\n\
+if [ -f /mnt/keys/id_rsa.pub ]; then\n\
+  cp /mnt/keys/id_rsa.pub /home/developer/.ssh/authorized_keys\n\
+  chown developer:developer /home/developer/.ssh/authorized_keys\n\
+  chmod 600 /home/developer/.ssh/authorized_keys\n\
+fi\n' > /usr/local/bin/setup-ssh-key.sh && chmod +x /usr/local/bin/setup-ssh-key.sh
+
+RUN printf '[Unit]\n\
+Description=Setup SSH key for developer\n\
+Before=sshd.service\n\
+ConditionPathExists=/mnt/keys/id_rsa.pub\n\
+\n\
+[Service]\n\
+Type=oneshot\n\
+ExecStart=/usr/local/bin/setup-ssh-key.sh\n\
+RemainAfterExit=yes\n\
+\n\
+[Install]\n\
+WantedBy=multi-user.target\n' > /etc/systemd/system/setup-ssh-key.service && \
+    ln -s /etc/systemd/system/setup-ssh-key.service /etc/systemd/system/multi-user.target.wants/setup-ssh-key.service
+
+VOLUME ["/sys/fs/cgroup"]
+
+STOPSIGNAL SIGRTMIN+3
+
+CMD ["/sbin/init"]

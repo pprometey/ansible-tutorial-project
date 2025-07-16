@@ -1,36 +1,41 @@
-- name: Install Nginx with content on RedHat-like and Debian-like systems 
+- name: Install Nginx with content uses template on RedHat-like and Debian-like systems
   hosts: all
   become: true
-  
+
   vars:
-    source_file: "../website_content3/index.j2" # Путь к шаблону 
-    dest_file: "/var/www/html"
-    dest_file_redhat: "/usr/share/nginx/html" 
+    source_dir: "../website_content3" # каталог с шаблоном и файлами изображений
+    dest_file_debian: "/var/www/html"
+    dest_file_redhat: "/usr/share/nginx/html"
 
   tasks:
-    - name: Ensure the Nginx package is installed 
-      package: name=nginx state=present update_cache=yes 
+    - name: Ensure nginx is installed and index + files are in place
+      block:
+        - name: Install nginx # устанавливаем nginx
+          package:
+            name: nginx
+            state: present
+            update_cache: yes
 
-    - block:
-      - name: Generate index.html to Nginx web root on Debian-like systems
-        template: # генерируем файл по шаблону, перменные автоматически подставятся
-          src: "{{ source_file }}" 
-          dest: "{{ dest_file }}/index.html" # Путь к сгенерированному файлу
-          mode: '0644' 
+        - name: Set nginx web root path 
+          set_fact:  
+            nginx_web_root: "{{ (ansible_os_family == 'Debian') | ternary(dest_file_debian, dest_file_redhat) }}" 
+            # записываем в переменную nginx_web_root путь к каталогу с дефолтной страницей в зависимости от используемого дистрибутива
+            # если Debian значит берем занчения из dest_file_debian, иначе из dest_file_redhat
 
-      - name: Ensure nginx is running and enabled 
-        service: name=nginx state=started enabled=yes
-      when: ansible_os_family == "Debian"
+        - name: Generate index.html
+          template:
+            src: "{{ source_dir }}/index.j2" # откуда берем шаблон, в нашем случае "../website_content3/index.j2"
+            dest: "{{ nginx_web_root }}/index.html" # куда и с каким имененм сгенерировать файл по шаблону
+            mode: '0644'
 
-    - block: 
-      - name:  Generate index.html to Nginx web root on RedHat-like systems
-        template:  # генерируем файл по шаблону, перменные автоматически подставятся
-          src: "{{ source_file }}" 
-          dest: "{{ dest_file_redhat }}/index.html" # Путь к сгенерированному файлу
-          mode: '0644' 
+        - name: Copy image files to nginx web root # копируем файлы изображений
+          copy: 
+            src: "{{ item }}"
+            dest: "{{ nginx_web_root }}/"
+            mode: '0644'
+          loop: "{{ lookup('fileglob', '{{ source_dir }}/image*.*', wantlist=True) }}"
 
-      - name:  Reload or start nginx in container 
-        shell: |
-          nginx -t && nginx -s reload || nginx
-        ignore_errors: true
-      when: ansible_os_family == "RedHat"
+        - name: Ensure nginx is running and enabled 
+          service: name=nginx state=started enabled=yes
+
+      when: ansible_os_family in ['Debian', 'RedHat']

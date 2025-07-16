@@ -6,10 +6,10 @@
     source_folder: "../website_content2"  # устанавливаем директорию, откуда будем копировать
     dest_folder_debian: "/var/www/html" # Путь назначения для дефолтной страницы на Debian-подобных системах
     dest_folder_redhat: "/usr/share/nginx/html" # Путь назначения для дефолтной страницы на RedHat-подобных системах
-    # web_files: # Определяем элементы цикла в виде переменной web_files для цикла loop
-    #   - index.html
-    #   - image1.jpeg
-    #   - image2.png
+    web_files: # Определяем элементы цикла в виде переменной web_files
+      - index.html
+      - image1.jpeg
+      - image2.png
 
   tasks:
     - name: Ensure the Nginx package is installed 
@@ -18,32 +18,21 @@
         state: present
         update_cache: yes 
 
-    - block: 
-      - name: 
-        copy: 
-          # src: "{{ source_folder }}/{{ item }}"   # откуда будем копировать файл
-          src: "{{ item }}"  # откуда будем копировать файл
-          dest: "{{ dest_folder_debian }}"   # каталог куда копировать файл
-          mode: '0644' 
-        # loop: "{{ web_files }}"  #  какие элементы копировать в цикле
-        with_fileglob: "{{ source_folder }}/*.*"  # вовращаем в цикле по одному все файлы в каталоге
-
-      - name: Ensure nginx is running and enabled 
-        service: name=nginx state=started enabled=yes
+    - name: Copy custom index.html to Nginx web root on Debian-like systems
+      copy: 
+        src: "{{ source_folder }}/{{ item }}"  #  откуда брать файл
+        dest: "{{ dest_folder_debian }}"   #  каталог куда копировать файл
+        mode: '0644' 
+      loop: "{{ web_files }}"  # задаем какие элементы копировать в цикле
       when: ansible_os_family == "Debian"
 
-    - block: 
-      - name: Copy custom index.html to Nginx web root on RedHat-like systems
-        copy: 
-          # src: "{{ source_folder }}/{{ item }}"   # откуда будем копировать файл
-          src: "{{ item }}"  # откуда будем копировать файл
-          dest: "{{ dest_folder_redhat }}"  #  каталог куда копировать файл 
-          mode: '0644' 
-        # loop: "{{ web_files }}" #  какие элементы копировать в цикле
-        with_fileglob: "{{ source_folder }}/*.*"  # вовращаем в цикле по одному все файлы в каталоге
-
-      - name:  Reload or start nginx in container 
-        shell: |
-          nginx -t && nginx -s reload || nginx
-        ignore_errors: true
+    - name: Copy custom index.html to Nginx web root on RedHat-like systems
+      copy: 
+        src: "{{ source_folder }}/{{ item }}"  #  откуда брать файл
+        dest: "{{ dest_folder_redhat }}"   #  каталог куда копировать файл
+        mode: '0644' 
+      loop: "{{ web_files }}" # задаем какие элементы копировать в цикле
       when: ansible_os_family == "RedHat"
+
+    - name: Ensure nginx is running and enabled 
+      service: name=nginx state=started enabled=yes

@@ -1,0 +1,6 @@
+#SPDX-License-Identifier: MIT-0
+---
+# vars file for deploy_nginix_with_content
+
+dest_file_debian: "/var/www/html"
+dest_file_redhat: "/usr/share/nginx/html"
