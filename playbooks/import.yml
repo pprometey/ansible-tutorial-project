@@ -1,0 +1,14 @@
+- name: Demo import and include
+  hosts: localhost
+  gather_facts: no
+  become: no
+  
+  vars:
+    my_var: "Hello, Ansible!"
+
+  tasks:
+  - name: Create folders
+    import_tasks: subtasks/create_folders.yml
+
+  - name: Create files
+    include_tasks: subtasks/create_files.yml  

@@ -2014,15 +2014,18 @@ ansible-galaxy role install robertdebock.users --roles-path ./roles
 `requirements.yml` в ансибл — это файл, где перечислены внешние роли или коллекции, которые нужно установить перед выполнением плейбука и от которых он зависит. Это особенно удобно если используется несколько ролей, и чтобы не устанавливать их по отдельности, достаточно их перечислить в этом файле, и установить одной командой. 
 
 В нашем случае будем устанавливать ту же роль `robertdebock.users`, но уже через файл `requirements.yml`, для этого создадим его в корне проекта, и укажем роль, которую собираемя установить:
+
 ```yaml
 roles:
   - name: robertdebock.users_requirements
     src: robertdebock.users
     version: 6.1.5
 ```
+
 При исползовании файла `requirements.yml` в поле `name:` мы можем указать произвольное имя для роли, в нашем случае мы ее назвали `robertdebock.users_requirements`, в `src` мы указываем уникальное имя роли в galaxy.
 
 Установка c помощью `requirements.yml`
+
 ```sh
 ansible-galaxy role install -r requirements.yml --roles-path ./roles
 ```
@@ -2036,4 +2039,138 @@ roles:
     scm: git # указывает, что источник — Git-репо
     version: master # ветка, тег или коммит
 ```
+
+## Шаг 10. Директивы `import_*` и `include_*`
+
+В дополнение к механизму `roles`, Ansible предоставляет директивы `import_*` и `include_*` для более гибкой организации кода. Они позволяют подключать внешние задачи, переменные и роли прямо внутри блоков `tasks`, как в основном playbook'е, так и внутри ролей.
+
+Название | Назначение 
+--- | ---
+`import_tasks` | Статически импортирует файл с задачами
+`include_tasks` | Динамически включает файл с задачами
+`include_vars` | Загружает переменные из файла или директории
+`import_role` | Статически импортирует роль
+`include_role` | Динамически включает роль
+
+Разница между ними в моменте выполнения:
+- `import_*` (например, `import_tasks`, `import_role`) — статические. Подключаются во время разбора playbook'а, до начала его выполнения. Даже если указано условие `when`, оно будет проигнорировано. 
+- `include_*` (например, `include_tasks`, `include_role`, `include_vars`) — динамические. Выполняются во время исполнения playbook'а. Это значит, что условие `when` действительно может отключить весь блок целиком, если условие ложно.
+
+С помощью этих директив можно:
+- Делить задачи на логические блоки и выносить в отдельные файлы.
+- Загружать переменные или их наборы по условиям.
+- Подключать роли точечно, с передачей переменных и условий.
+
+Такой подход повышает читаемость и переиспользуемость кода без избыточной вложенности.
+
+Приемущества использования `import_*`:
+- Ansible заранее знает весь набор задач. Это важно, например, при статическом анализе (`ansible-lint`), dry-run'е (`--check`) и испльзовании `tags`.
+- Ошибка на этапе разбора, если файл не существует:
+   - с `import_tasks`  перед исполнением плейбука выскочит ошибка, что файл не найден.
+   - с `include_tasks` ошибка произойдёт только во время исполнения плейбука, и только если блок дойдёт до этой задачи.
+
+Когда использовать `include_*`:
+- Когда нужно подключать блоки по условию (`when`), например, в зависимости от переменной или флага.
+- Когда путь к файлу или роли динамический ("`{{ var }}.yml`"), потому что `import_*` не поддерживает шаблоны.
+
+**Вывод:**
+`import_*` — для **жестко фиксированной структуры**, `include_*` — для **гибкости и условий**.
+
+Для демонстрации использования `import_tasks` и `include_tasks` напишем простой и примитвный плейбук `playbooks/import.yml`, который создаст две директории, и два файла:
+
+```yaml
+---
+- name: Demo import and include
+  hosts: localhost
+  gather_facts: no
+  become: no
+  
+  vars:
+    my_var: "Hello, Ansible!"
+    create_files_flag: true
+
+  tasks:
+    - name: Create folder 1
+      file:
+        path: /tmp/demo/folder1
+        state: directory
+        mode: '0755'
+
+    - name: Create folder 2
+      file:
+        path: /tmp/demo/folder2
+        state: directory
+        mode: '0755'  
+
+    - block:
+        - name: Create file 1
+          copy:
+            dest: /tmp/demo/file1.txt
+            content: "{{ my_var }} - File 1"
+            mode: '0644'  
+
+        - name: Create file 2
+          copy:
+            dest: /tmp/demo/file2.txt
+            content: "{{ my_var }} - File 2"
+            mode: '0644'  
+      when: create_files_flag
+```
+
+И теперь вынесем логику создания директорий в отдельный файл `create_folders.yml` и разместим его в подкаталоге `subtasks`:
+```yaml
+- name: Create folder 1
+  file:
+    path: /tmp/demo/folder1
+    state: directory
+    mode: '0755'
+
+- name: Create folder 2
+  file:
+    path: /tmp/demo/folder2
+    state: directory
+    mode: '0755'  
+```
+Логику создания файлов мы вынесем в отдельный файл `subtasks/create_files.yml`:
+
+```yaml
+- name: Create file 1
+  copy:
+    dest: /tmp/demo/file1.txt
+    content: "{{ my_var }} - File 1"
+    mode: '0644'
+
+- name: Create file 2
+  copy:
+    dest: /tmp/demo/file2.txt
+    content: "{{ my_var }} - File 2"
+    mode: '0644'
+```
+
+Теперь изменим файл плейбука `import.yml`, удалив вынесененный ранее код, и подключив его через директивы `import` и `include`:
+```yaml
+---
+- name: Demo import and include
+  hosts: localhost
+  gather_facts: no
+  become: no
+
+  vars:
+    my_var: "Hello, Ansible!"
+    create_files_flag: true
+
+  tasks:
+    - name: Create folders (imported statically)
+      import_tasks: subtasks/create_folders.yml
+
+    - name: Conditionally create files (included dynamically)
+      include_tasks: subtasks/create_files.yml
+      when: create_files_flag
+      vars:
+        my_var: "{{ my_var }} - overridden in include"
+
+```
+- `import_tasks` подтянет задачи из `create_folders.yml` в момент разбора плейбука.
+- `include_tasks` подтянет задачи из `create_files.yml` во время выполнения, только если `create_files_flag = true`. Если изменить `create_files_flag` на `false`, задачи создания файлов не выполнятся и даже не загрузятся.
+- в `include_tasks` мы передаем переменную `my_var` с новым значением — она применяется и действует только локально внутри этого блока.
 

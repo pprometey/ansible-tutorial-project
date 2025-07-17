@@ -1,0 +1,11 @@
+- name: Create file 1
+  copy:
+    dest: /tmp/demo/file1.txt
+    content: "{{ my_var }} - File 1"
+    mode: '0644'
+
+- name: Create file 2
+  copy:
+    dest: /tmp/demo/file2.txt
+    content: "{{ my_var }} - File 2"
+    mode: '0644'

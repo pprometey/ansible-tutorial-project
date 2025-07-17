@@ -1,0 +1,11 @@
+- name: Create folder 1
+  file:
+    path: /tmp/demo/folder1
+    state: directory
+    mode: '0755'
+
+- name: Create folder 2
+  file:
+    path: /tmp/demo/folder2
+    state: directory
+    mode: '0755'  
