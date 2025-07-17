@@ -1,0 +1,21 @@
+- name: Ansible error handling playbook
+  hosts: all
+  any_errors_fatal: false #  true - останавливать выполнение плейбука при возникновении ошибки любом хосте
+  become: yes
+
+  tasks:
+    - name: Task 1 update apt cache
+      apt: 
+        update_cache: yes 
+      ignore_errors: yes # игнорировать ошибку и продолжать выполнение задач на этом хосте
+
+    - name: Task2
+      shell: echo Task2
+      register: result
+      failed_when: "`Task2` in result.stdout" # генерируем ошибку на основании вывода команды
+
+    - debug:
+        var: result
+
+    - name: Task3
+      shell: echo Task3

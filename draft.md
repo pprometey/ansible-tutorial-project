@@ -2289,3 +2289,346 @@ tasks:
         - server.key
         - server.crt
 ```
+
+## Шаг 12. Обработка ошибок в Ansible
+
+Используя ансибл на практике, важно понимать, как и в какой последовательности ансибл запускает задачи в плейбуке. Для примера возьмем ситуацию, что у нас есть управляющий сервер (ansible master) и три целевых хоста (minion1, minio2, minio3). На управляющем сервере мы запускаем на исполнение плейбук, состоящий из 4 задач. На minion2 при выполнении второй задачи происходит ошибка. 
+
+Это можно отразить в виде диаграммы:
+```mermaid
+flowchart TD
+    Master[Ansible Master]:::master
+
+    Minion1[Minion1]:::node
+    Minion2[Minion2]:::node
+    Minion3[Minion3]:::node
+
+    Master --> Minion1
+    Master --> Minion2
+    Master --> Minion3
+
+    Minion1 --> T1m1[Task 1: OK]:::ok --> T2m1[Task 2: OK]:::ok --> T3m1[Task 3: OK]:::ok --> T4m1[Task 4: OK]:::ok
+    Minion2 --> T1m2[Task 1: OK]:::ok --> T2m2[Task 2: FAILED]:::fail --> T3m2[Task 3: SKIPPED]:::skip --> T4m2[Task 4: SKIPPED]:::skip
+    Minion3 --> T1m3[Task 1: OK]:::ok --> T2m3[Task 2: OK]:::ok --> T3m3[Task 3: OK]:::ok --> T4m3[Task 4: OK]:::ok
+
+    classDef master fill:#dbeafe,stroke:#2563eb,color:#1e3a8a;
+    classDef node fill:#f0f9ff,stroke:#0284c7,color:#075985;
+    classDef ok fill:#d4f4dd,stroke:#2f8132,color:#2f8132;
+    classDef fail fill:#f8d7da,stroke:#a71d2a,color:#a71d2a;
+    classDef skip fill:#e2e3e5,stroke:#6c757d,color:#6c757d;
+```
+
+Ansible запускает задачи по порядку, как они указаны в плейбуке, проходя по всем хостам в порядке, заданном в инвентаре, и выполняет одну задачу за раз. Для каждой задачи используется пул воркеров (forks, по умолчанию 5), поэтому выполнение происходит параллельно, но только в рамках текущей задачи.
+- Task 1 запускается на всех хостах параллельно.
+- Когда Task 1 завершён на всех хостах, - только тогда запускается Task 2. 
+
+Если на хосте происходит ошибка при выполнении задачи, Ansible помечает этот хост как "failed", и он исключается из выполнения всех последующих задач в плейбуке.
+
+На диаграмме последовательности это выгдядит так:
+```mermaid
+sequenceDiagram
+    participant master
+    participant minion1
+    participant minion2
+    participant minion3
+
+    Note over master: Task 1 start (parallel)
+
+    par minion1
+        master->>minion1: Execute Task 1
+        minion1-->>master: OK
+    and minion2
+        master->>minion2: Execute Task 1
+        minion2-->>master: OK
+    and minion3
+        master->>minion3: Execute Task 1
+        minion3-->>master: OK
+    end
+
+    Note over master: Task 2 start (parallel)
+
+    par minion1
+        master->>minion1: Execute Task 2
+        minion1-->>master: OK
+    and minion2
+        master->>minion2: Execute Task 2
+        minion2-->>master: FAILED
+    and minion3
+        master->>minion3: Execute Task 2
+        minion3-->>master: OK
+    end
+
+    Note over master: Task 3 start (parallel)
+
+    par minion1
+        master->>minion1: Execute Task 3
+        minion1-->>master: OK
+    and minion3
+        master->>minion3: Execute Task 3
+        minion3-->>master: OK
+    end
+
+    Note over minion2: Task 3 skipped due to failure
+
+    Note over master: Task 4 start (parallel)
+
+    par minion1
+        master->>minion1: Execute Task 4
+        minion1-->>master: OK
+    and minion3
+        master->>minion3: Execute Task 4
+        minion3-->>master: OK
+    end
+
+    Note over minion2: Task 4 skipped due to failure
+
+```
+
+### any_errors_fatal
+
+Если мы хотим, чтобы ансибл при возникновении ошибки на каком-нибдуь из хостов прекращал выполнение всего плейбука, необходимо добавить в плейбук директиву `any_errors_fatal: true`.
+
+Для демонстрации, напишем плейбук `playbooks/error_handling.yml`, который будет первой задачей обновлять кеш менеджера пакетов `apt`, а второй и третьей задачей выполнять команду `echo`. Поскольку `minion3` основан на дистрибутиве `Red Hat`, этот хост выдаст ошибку, так как в нём используется менеджер пакетов `dnf`.
+
+```yaml
+---
+- name: Ansible error handling playbook
+  hosts: all
+  any_errors_fatal: true # останавливать выполнение плейбука при возникновении ошибки лбом хосте
+  become: yes
+
+  tasks:
+    - name: Task 1 update apt cache
+      apt: 
+        update_cache: yes 
+
+    - name: Task2
+      shell: echo Task2
+
+    - name: Task3
+      shell: echo Task3
+```
+Запустив плейбук, сможем убедится, что псоле возникновения ошибки, ансибл остановил выполнения плейбука, и не стал выполнять задачи 2 и 3 на других хостах. 
+
+```sh
+ansible-playbook playbooks/error_handling.yml
+
+PLAY [Ansible error handling playbook] 
+
+TASK [Gathering Facts] 
+ok: [minion3]
+ok: [minion2]
+ok: [minion1]
+
+TASK [Task 1 update apt cache] 
+fatal: [minion3]: FAILED! => {"changed": false, "cmd": "update", "msg": "[Errno 2] No such file or directory: b'update'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+ok: [minion1]
+ok: [minion2]
+
+PLAY RECAP 
+minion1 : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+minion2 : ok=2    changed=0    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+minion3 : ok=1    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+
+```
+
+Если же сделаем  `any_errors_fatal: false`, то ожидаемо задачи 2 и 3 будут выполнятся на minion1 и minion2:
+```sh
+ansible-playbook playbooks/error_handling.yml
+
+PLAY [Ansible error handling playbook] 
+
+TASK [Gathering Facts] 
+ok: [minion2]
+ok: [minion1]
+ok: [minion3]
+
+TASK [Task 1 update apt cache] 
+fatal: [minion3]: FAILED! => {"changed": false, "cmd": "update", "msg": "[Errno 2] No such file or directory: b'update'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+ok: [minion1]
+ok: [minion2]
+
+TASK [Task2] 
+changed: [minion1]
+changed: [minion2]
+
+TASK [Task3] 
+changed: [minion1]
+changed: [minion2]
+
+PLAY RECAP 
+minion1 : ok=4    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+minion2 : ok=4    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+minion3 : ok=1    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+
+```
+
+### ignore_errors
+
+Если мы хотим, чтобы Ansible игнорировал ошибку и продолжал выполнение следующих задач на хосте, где она возникла, необходимо в задаче установить параметр `ignore_errors: yes` (или `true`, что в Ansible эквивалентно).
+
+```yaml
+---
+- name: Ansible error handling playbook
+  hosts: all
+  any_errors_fatal: false #  true - останавливать выполнение плейбука при возникновении ошибки любом хосте
+  become: yes
+
+  tasks:
+    - name: Task 1 update apt cache
+      apt: 
+        update_cache: yes 
+      ignore_errors: yes  # игнорировать ошибку и продолжать выполнение задач на этом хосте
+
+    - name: Task2
+      shell: echo Task2
+
+    - name: Task3
+      shell: echo Task3
+```
+
+Запустим плейбук, и убедимся, что несмотря на то что произошла ошибка, задачи 2 и 3 выполнились на minion3:
+```sh
+ansible-playbook playbooks/error_handling.yml
+
+PLAY [Ansible error handling playbook] 
+
+TASK [Gathering Facts] 
+ok: [minion2]
+ok: [minion1]
+ok: [minion3]
+
+TASK [Task 1 update apt cache] 
+[WARNING]: Updating cache and auto-installing missing dependency: python3-apt
+fatal: [minion3]: FAILED! => {"changed": false, "cmd": "update", "msg": "[Errno 2] No such file or directory: b'update'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+...ignoring
+ok: [minion1]
+ok: [minion2]
+
+TASK [Task2] 
+changed: [minion2]
+changed: [minion1]
+changed: [minion3]
+
+TASK [Task3] 
+changed: [minion1]
+changed: [minion2]
+changed: [minion3]
+
+PLAY RECAP 
+minion1 : ok=4    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+minion2 : ok=4    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=0   
+minion3 : ok=4    changed=2    unreachable=0    failed=0    skipped=0    rescued=0    ignored=1  
+```
+
+### failed_when
+
+Ansible считает выполнение задачи неудачным, если команда или модуль возвращают ненулевой код возврата (non-zero exit code). Если код возврата равен 0, задача считается успешно выполненной.
+`failed_when` позволяет изменить это правило и задать своё условие для вызова ошибки, например, на основе вывода команды или других факторов.
+
+Сначала модифицируем плейбук, и отобразим полный вывод команды `shell: echo Task2`:
+
+```yaml
+- name: Ansible error handling playbook
+  hosts: all
+  any_errors_fatal: false #  true - останавливать выполнение плейбука при возникновении ошибки любом хосте
+  become: yes
+
+  tasks:
+    - name: Task 1 update apt cache
+      apt: 
+        update_cache: yes 
+      ignore_errors: yes # игнорировать ошибку и продолжать выполнение задач на этом хосте
+
+    - name: Task2
+      shell: echo Task2
+      register: result
+
+    - debug:
+        var: result
+
+    - name: Task3
+      shell: echo Task3
+
+```
+
+После запуска плейбука и просмотра вывода мы видим, что переменная result содержит подробную структуру с информацией о выполнении команды 
+```
+TASK [debug] 
+ok: [minion1] => {
+    "result": {
+        "changed": true,
+        "cmd": "echo Task2",
+        "delta": "0:00:00.002790",
+        "end": "2025-07-17 20:00:11.915887",
+        "failed": false,
+        "msg": "",
+        "rc": 0,
+        "start": "2025-07-17 20:00:11.913097",
+        "stderr": "",
+        "stderr_lines": [],
+        "stdout": "Task2",
+        "stdout_lines": [
+            "Task2"
+        ]
+    }
+}
+```
+`"rc": 0` - это поле содержит код возврата. Ключ `"stderr": ""` содержит информацию об ошибке, если бы она произошла, и код возврата был бы больше нуля.  Ключ `"stdout": "Task2"` содержит вывод команды. 
+
+Теперь в демонстрационных целях перепишем наш плейбук, чтобы возникала ошибка, если в выводе команды `echo Task2` содержится слово `Task2` (а оно конечно содержится):
+
+```yaml
+- name: Ansible error handling playbook
+  hosts: all
+  any_errors_fatal: false #  true - останавливать выполнение плейбука при возникновении ошибки любом хосте
+  become: yes
+
+  tasks:
+    - name: Task 1 update apt cache
+      apt: 
+        update_cache: yes 
+      ignore_errors: yes # игнорировать ошибку и продолжать выполнение задач на этом хосте
+
+    - name: Task2
+      shell: echo Task2
+      register: result
+      failed_when: "`Task2` in result.stdout" # генерируем ошибку на основании вывода команды
+
+    - debug:
+        var: result
+
+    - name: Task3
+      shell: echo Task3
+```
+
+Запустим плейбук, и убедимся, что все сработало как было задумано:
+
+```sh
+ansible-playbook playbooks/error_handling.yml
+
+PLAY [Ansible error handling playbook] 
+
+TASK [Gathering Facts] 
+ok: [minion3]
+ok: [minion2]
+ok: [minion1]
+
+TASK [Task 1 update apt cache] 
+[WARNING]: Updating cache and auto-installing missing dependency: python3-apt
+fatal: [minion3]: FAILED! => {"changed": false, "cmd": "update", "msg": "[Errno 2] No such file or directory: b'update'", "rc": 2, "stderr": "", "stderr_lines": [], "stdout": "", "stdout_lines": []}
+...ignoring
+ok: [minion1]
+ok: [minion2]
+
+TASK [Task2] 
+fatal: [minion2]: FAILED! => {"changed": true, "cmd": "echo Task2", "delta": "0:00:00.002292", "end": "2025-07-17 20:11:33.071133", "failed_when_result": "The conditional check '`Task2` in result.stdout' failed. The error was: template error while templating string: unexpected char '`' at 6. String: {% if `Task2` in result.stdout %} True {% else %} False {% endif %}. unexpected char '`' at 6", "msg": "", "rc": 0, "start": "2025-07-17 20:11:33.068841", "stderr": "", "stderr_lines": [], "stdout": "Task2", "stdout_lines": ["Task2"]}
+fatal: [minion1]: FAILED! => {"changed": true, "cmd": "echo Task2", "delta": "0:00:00.002615", "end": "2025-07-17 20:11:33.088121", "failed_when_result": "The conditional check '`Task2` in result.stdout' failed. The error was: template error while templating string: unexpected char '`' at 6. String: {% if `Task2` in result.stdout %} True {% else %} False {% endif %}. unexpected char '`' at 6", "msg": "", "rc": 0, "start": "2025-07-17 20:11:33.085506", "stderr": "", "stderr_lines": [], "stdout": "Task2", "stdout_lines": ["Task2"]}
+fatal: [minion3]: FAILED! => {"changed": true, "cmd": "echo Task2", "delta": "0:00:00.003127", "end": "2025-07-17 20:11:33.118187", "failed_when_result": "The conditional check '`Task2` in result.stdout' failed. The error was: template error while templating string: unexpected char '`' at 6. String: {% if `Task2` in result.stdout %} True {% else %} False {% endif %}. unexpected char '`' at 6", "msg": "", "rc": 0, "start": "2025-07-17 20:11:33.115060", "stderr": "", "stderr_lines": [], "stdout": "Task2", "stdout_lines": ["Task2"]}
+
+PLAY RECAP 
+minion1 : ok=2    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+minion2 : ok=2    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=0   
+minion3 : ok=2    changed=0    unreachable=0    failed=1    skipped=0    rescued=0    ignored=1   
+```
+
