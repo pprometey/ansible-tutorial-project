@@ -1,0 +1,5 @@
+- hosts: localhost
+  tasks:
+    - name: Show secret vars
+      debug:
+        msg: "Password={{ db_password }}"
