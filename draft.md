@@ -2170,7 +2170,122 @@ roles:
         my_var: "{{ my_var }} - overridden in include"
 
 ```
+
 - `import_tasks` подтянет задачи из `create_folders.yml` в момент разбора плейбука.
 - `include_tasks` подтянет задачи из `create_files.yml` во время выполнения, только если `create_files_flag = true`. Если изменить `create_files_flag` на `false`, задачи создания файлов не выполнятся и даже не загрузятся.
-- в `include_tasks` мы передаем переменную `my_var` с новым значением — она применяется и действует только локально внутри этого блока.
+- в `include_tasks` мы передаем переменную `my_var` с новым значением — она применяется и действует только локально внутри этого блока, в том числе и внутри подключаемого файла (subtasks/create_files.yml) — для всех задач, описанных в нём.
 
+## Шаг 11. Директивы `delegate_to` и `run_once`
+
+### `delegate_to`
+
+`delegate_to` — директива Ansible, которая позволяет выполнить задачу не на том хосте, к которому подключается Ansible, а на другом, например, на управляющем, при этом используя переменные целевого хоста.
+
+Для демонстрации создадим плейбук `playbooks/delegate.yml`:
+
+```yaml
+---
+- name: Get IP and log on control node
+  hosts: all
+  gather_facts: no
+
+  tasks:
+    - name: Get IP address using hostname -I
+      command: hostname -I
+      register: ip_cmd
+
+    - name: Set IP fact
+      set_fact:
+        node_ip: "{{ ip_cmd.stdout.split()[0] }}"  # берем первый IP из списка
+
+    - name: Log IP on control node # делегируем выполнение задачи на управляющую машину, записывая IP адреса целевых хостов
+      lineinfile:
+        path: /tmp/ips.log  
+        line: "{{ inventory_hostname }} -> {{ node_ip }}"
+        create: yes
+      delegate_to: localhost
+```
+
+Запустим плейбук, и проверим результат его выполнения:
+
+```sh
+cat /tmp/ips.log
+minion2 -> 172.18.0.3
+minion1 -> 172.18.0.4
+minion3 -> 172.18.0.2
+```
+
+Как мы видим на целевых хостах выполнилась команда `hostname -I` которая возвращает IP адрес целевого хоста, затем вывод этой команд был сохранен в переменую `node_ip` с помощью `set_fact`, и значение которой было добавлено в файл лога на управляющей машине, благодаря тому, что задача добавление в лог была выполнена с директивой `delegate_to: localhost`
+
+В ранних версиях ансибл одним из наиболее популярных кейсов использования `delegate_to`, было ожидание доступности целевых хостов, после их удаленной перезагрузки, это выглядело примерно так: 
+```yaml
+- name: Demo remote reboot server and wait 
+  hosts: all
+  gather_facts: yes
+  become: yes
+
+tasks:
+  - name: Reboot servers
+    shell: sleep 3 && reboot now # Выполнить команду перезагрузки с задержкой 3 секунды
+    async: 1 # Разрешить выполнение команды в фоне (1 секунда до "отрыва")
+    pull: 0 # Не ждать завершения, отпустить задачу в фон
+
+  - name: Wait for host to come back online
+    wait_for:
+      host: "{{ inventory_hostname }}" # Хост, к которому пытаемся подключиться (из inventory)
+      state: started  # Ждём, пока он станет доступен по TCP
+      delay: 5 # Подождать 5 секунд перед первой проверкой
+      timeout: 60 # Максимум 60 секунд на ожидание
+    delegate_to: localhost # Выполняем ожидание с локальной машины (а не на перезагружаемом хосте)
+```
+
+Но в современных версия ансибл (начиная с 2.7+) для этой цели доступен встроенный модуль reboot, который более корректно решает данную задачу:
+
+```yml
+- reboot:
+    reboot_timeout: 120  #время ожидания в секундах, пока сервер перезагрузится и станет доступным по SSH.
+```
+
+### `run_once`
+
+Если плейбук запускается на нескольких хостах, но задачу нужно выполнить только один раз на одном из них, используют директиву `run_once: true`. Она гарантирует, что задача выполнится только на одном хосте, независимо от числа целевых машин.
+`run_once` — запускает задачу на первом хосте в списке, который определяется порядком в inventory. Если нужно явно выбрать хост - следует использовать `delegate_to : имя_хоста`.
+
+В группе серверов нужно сгенерировать общий SSL-сертификат или ключ один раз (например, на первом сервере), а потом разослать его остальным.
+
+Обычно `run_once` используется:
+- Для создания и распространения ключей, например, для nginx или HAProxy
+- При генерации единых конфигураций, например, для кластерных сервисов.
+- При получении единого токена или API-ключа, который нужен всем хостам.
+
+Условный пример, генерация ключа и самоподписанного сертификата один раз, и рассылка всем хостам:
+
+```yaml
+- name: Generate and distribute SSL cert
+  hosts: webservers
+  become: yes
+  tasks:
+    - name: Generate private key
+      community.crypto.openssl_privatekey:
+        path: /tmp/server.key
+      run_once: true
+      delegate_to: localhost
+
+    - name: Generate self-signed certificate
+      community.crypto.openssl_certificate:
+        path: /tmp/server.crt
+        privatekey_path: /tmp/server.key
+        common_name: "example.local"
+        provider: selfsigned
+      run_once: true
+      delegate_to: localhost
+
+    - name: Copy cert and key to all servers
+      copy:
+        src: "/tmp/{{ item }}"
+        dest: "/etc/ssl/{{ item }}"
+        mode: "0600"
+      loop:
+        - server.key
+        - server.crt
+```

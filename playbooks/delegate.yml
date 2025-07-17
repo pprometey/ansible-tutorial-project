@@ -1,0 +1,20 @@
+---
+- name: Get IP and log on control node
+  hosts: all
+  gather_facts: no
+
+  tasks:
+    - name: Get IP address using hostname -I
+      command: hostname -I
+      register: ip_cmd
+
+    - name: Set IP fact
+      set_fact:
+        node_ip: "{{ ip_cmd.stdout.split()[0] }}"  # берем первый IP из списка
+
+    - name: Log IP on control node
+      lineinfile:
+        path: /tmp/ips.log
+        line: "{{ inventory_hostname }} -> {{ node_ip }}"
+        create: yes
+      delegate_to: localhost
