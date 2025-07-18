@@ -1,8 +1,8 @@
 {
   "name": "Debian 13 + Ansible (venv)",
-  "dockerComposeFile": "docker-compose.yml", 
-  "service": "ansible-learning-template-controller", 
-  "workspaceFolder": "/home/developer/${localWorkspaceFolderBasename}", 
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "ansible-tutorial-project-controller",
+  "workspaceFolder": "/home/developer/${localWorkspaceFolderBasename}",
   "remoteUser": "developer",
   "containerUser": "developer",
   "features": {},
